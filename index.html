@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RadarImob – Imóveis com Inteligência</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            radar: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="mostrarPagina('home')">
+        <div class="w-9 h-9 bg-radar-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">R</div>
+        <span class="font-bold text-xl text-radar-800">RadarImob</span>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <button onclick="mostrarPagina('home')" class="hover:text-radar-600">Início</button>
+        <button onclick="mostrarPagina('imoveis')" class="hover:text-radar-600">Imóveis</button>
+        <button onclick="mostrarPagina('sobre')" class="hover:text-radar-600">Sobre</button>
+        <button onclick="mostrarPagina('contato')" class="hover:text-radar-600">Contato</button>
+      </nav>
+
+      <a href="https://wa.me/5511999999999" target="_blank"
+         class="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+        <span>WhatsApp</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- HOME -->
+  <section id="page-home" class="page active">
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-radar-800 to-radar-600 text-white">
+      <div class="max-w-7xl mx-auto px-4 py-16 md:py-24">
+        <div class="max-w-2xl">
+          <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-4">
+            Encontre o imóvel ideal com inteligência
+          </h1>
+          <p class="text-radar-100 text-lg mb-8">
+            Busca inteligente + acompanhamento real do que as pessoas estão olhando.
+          </p>
+
+          <!-- Busca -->
+          <div class="bg-white rounded-xl p-3 flex flex-col md:flex-row gap-3 shadow-lg">
+            <select id="filtro-tipo" class="flex-1 px-4 py-3 rounded-lg text-gray-700 border border-gray-200 text-sm">
+              <option value="">Tipo de imóvel</option>
+              <option value="apartamento">Apartamento</option>
+              <option value="casa">Casa</option>
+              <option value="terreno">Terreno</option>
+              <option value="comercial">Comercial</option>
+            </select>
+            <select id="filtro-finalidade" class="flex-1 px-4 py-3 rounded-lg text-gray-700 border border-gray-200 text-sm">
+              <option value="">Finalidade</option>
+              <option value="venda">Comprar</option>
+              <option value="aluguel">Alugar</option>
+            </select>
+            <input type="text" id="filtro-bairro" placeholder="Bairro ou cidade"
+                   class="flex-1 px-4 py-3 rounded-lg text-gray-700 border border-gray-200 text-sm">
+            <button onclick="buscarImoveis()"
+                    class="bg-radar-600 hover:bg-radar-700 text-white font-semibold px-6 py-3 rounded-lg">
+              Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Destaques -->
+    <div class="max-w-7xl mx-auto px-4 py-12">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Imóveis em destaque</h2>
+        <button onclick="mostrarPagina('imoveis')" class="text-radar-600 text-sm font-medium hover:underline">
+          Ver todos →
+        </button>
+      </div>
+
+      <div id="destaques" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Preenchido via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- LISTAGEM DE IMÓVEIS -->
+  <section id="page-imoveis" class="page">
+    <div class="max-w-7xl mx-auto px-4 py-10">
+      <h1 class="text-2xl font-bold mb-6">Todos os imóveis</h1>
+
+      <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-col md:flex-row gap-3">
+        <select id="lista-tipo" class="px-4 py-2 border rounded-lg text-sm">
+          <option value="">Todos os tipos</option>
+          <option value="apartamento">Apartamento</option>
+          <option value="casa">Casa</option>
+          <option value="terreno">Terreno</option>
+        </select>
+        <select id="lista-finalidade" class="px-4 py-2 border rounded-lg text-sm">
+          <option value="">Comprar e Alugar</option>
+          <option value="venda">Comprar</option>
+          <option value="aluguel">Alugar</option>
+        </select>
+        <input type="text" id="lista-busca" placeholder="Buscar por bairro..."
+               class="flex-1 px-4 py-2 border rounded-lg text-sm">
+        <button onclick="filtrarLista()" class="bg-radar-600 text-white px-5 py-2 rounded-lg text-sm font-medium">
+          Filtrar
+        </button>
+      </div>
+
+      <div id="lista-imoveis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Preenchido via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- DETALHE DO IMÓVEL -->
+  <section id="page-detalhe" class="page">
+    <div class="max-w-6xl mx-auto px-4 py-10">
+      <button onclick="mostrarPagina('imoveis')" class="text-sm text-radar-600 mb-6 hover:underline">
+        ← Voltar para imóveis
+      </button>
+
+      <div id="detalhe-conteudo">
+        <!-- Preenchido via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- SOBRE -->
+  <section id="page-sobre" class="page">
+    <div class="max-w-3xl mx-auto px-4 py-16 text-center">
+      <h1 class="text-3xl font-bold text-radar-800 mb-4">Sobre o RadarImob</h1>
+      <p class="text-gray-600 text-lg leading-relaxed">
+        O RadarImob nasceu para ajudar corretores e imobiliárias a enxergarem o que realmente acontece no site.
+        Não basta só anunciar imóveis. É preciso saber quem está olhando, o que está gerando interesse e onde está sendo deixado dinheiro na mesa.
+      </p>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="page-contato" class="page">
+    <div class="max-w-xl mx-auto px-4 py-16">
+      <h1 class="text-3xl font-bold text-center text-radar-800 mb-8">Fale conosco</h1>
+      <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
+        <p class="text-gray-600 mb-6">Prefere conversar direto?</p>
+        <a href="https://wa.me/5511999999999" target="_blank"
+           class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-8 py-3 rounded-xl">
+          Chamar no WhatsApp
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-radar-900 text-white mt-16">
+    <div class="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-radar-500 rounded-lg flex items-center justify-center font-bold text-sm">R</div>
+        <span class="font-semibold">RadarImob</span>
+      </div>
+      <p class="text-sm text-radar-200">© 2026 RadarImob. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <script>
+    // ===================== DADOS DE EXEMPLO =====================
+    const imoveis = [
+      {
+        id: 1,
+        titulo: "Apartamento 3 quartos – Jardins",
+        tipo: "apartamento",
+        finalidade: "venda",
+        bairro: "Jardins",
+        cidade: "São Paulo",
+        preco: 1250000,
+        quartos: 3,
+        banheiros: 2,
+        vagas: 2,
+        area: 120,
+        descricao: "Apartamento amplo e bem localizado, próximo a comércio e transporte.",
+        foto: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop"
+      },
+      {
+        id: 2,
+        titulo: "Casa com quintal – Moema",
+        tipo: "casa",
+        finalidade: "venda",
+        bairro: "Moema",
+        cidade: "São Paulo",
+        preco: 1890000,
+        quartos: 4,
+        banheiros: 3,
+        vagas: 3,
+        area: 220,
+        descricao: "Casa espaçosa com quintal e área gourmet.",
+        foto: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
+      },
+      {
+        id: 3,
+        titulo: "Apartamento 2 quartos – Pinheiros",
+        tipo: "apartamento",
+        finalidade: "aluguel",
+        bairro: "Pinheiros",
+        cidade: "São Paulo",
+        preco: 4500,
+        quartos: 2,
+        banheiros: 1,
+        vagas: 1,
+        area: 68,
+        descricao: "Apartamento moderno e bem iluminado, perfeito para casal.",
+        foto: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop"
+      },
+      {
+        id: 4,
+        titulo: "Cobertura duplex – Itaim Bibi",
+        tipo: "apartamento",
+        finalidade: "venda",
+        bairro: "Itaim Bibi",
+        cidade: "São Paulo",
+        preco: 3200000,
+        quartos: 4,
+        banheiros: 4,
+        vagas: 3,
+        area: 280,
+        descricao: "Cobertura de alto padrão com vista privilegiada.",
+        foto: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop"
+      },
+      {
+        id: 5,
+        titulo: "Studio moderno – Vila Madalena",
+        tipo: "apartamento",
+        finalidade: "aluguel",
+        bairro: "Vila Madalena",
+        cidade: "São Paulo",
+        preco: 3200,
+        quartos: 1,
+        banheiros: 1,
+        vagas: 1,
+        area: 42,
+        descricao: "Studio compacto e bem localizado.",
+        foto: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop"
+      },
+      {
+        id: 6,
+        titulo: "Casa em condomínio – Alphaville",
+        tipo: "casa",
+        finalidade: "venda",
+        bairro: "Alphaville",
+        cidade: "Barueri",
+        preco: 2450000,
+        quartos: 4,
+        banheiros: 5,
+        vagas: 4,
+        area: 350,
+        descricao: "Casa em condomínio fechado com lazer completo.",
+        foto: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop"
+      }
+    ];
+
+    // ===================== FUNÇÕES =====================
+    function formatarPreco(valor, finalidade) {
+      if (finalidade === 'aluguel') {
+        return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) + '/mês';
+      }
+      return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function criarCard(imovel) {
+      return `
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer"
+             onclick="abrirDetalhe(${imovel.id})">
+          <div class="aspect-[4/3] overflow-hidden">
+            <img src="${imovel.foto}" alt="${imovel.titulo}" class="w-full h-full object-cover hover:scale-105 transition duration-300">
+          </div>
+          <div class="p-5">
+            <div class="text-xs font-medium text-radar-600 mb-1 uppercase">${imovel.finalidade === 'venda' ? 'Venda' : 'Aluguel'}</div>
+            <h3 class="font-semibold text-gray-900 mb-1 line-clamp-1">${imovel.titulo}</h3>
+            <p class="text-sm text-gray-500 mb-3">${imovel.bairro}, ${imovel.cidade}</p>
+            <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+              <span>${imovel.quartos} quartos</span>
+              <span>•</span>
+              <span>${imovel.banheiros} banheiros</span>
+              <span>•</span>
+              <span>${imovel.area} m²</span>
+            </div>
+            <div class="font-bold text-radar-700 text-lg">${formatarPreco(imovel.preco, imovel.finalidade)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDestaques() {
+      const container = document.getElementById('destaques');
+      container.innerHTML = imoveis.slice(0, 3).map(criarCard).join('');
+    }
+
+    function renderLista(lista = imoveis) {
+      const container = document.getElementById('lista-imoveis');
+      if (lista.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-10">Nenhum imóvel encontrado.</p>';
+        return;
+      }
+      container.innerHTML = lista.map(criarCard).join('');
+    }
+
+    function mostrarPagina(nome) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + nome).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function abrirDetalhe(id) {
+      const imovel = imoveis.find(i => i.id === id);
+      if (!imovel) return;
+
+      const container = document.getElementById('detalhe-conteudo');
+      container.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="rounded-2xl overflow-hidden">
+            <img src="${imovel.foto}" alt="${imovel.titulo}" class="w-full h-full object-cover aspect-[4/3]">
+          </div>
+          <div>
+            <div class="text-sm font-medium text-radar-600 mb-2 uppercase">${imovel.finalidade === 'venda' ? 'Venda' : 'Aluguel'}</div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">${imovel.titulo}</h1>
+            <p class="text-gray-500 mb-4">${imovel.bairro}, ${imovel.cidade}</p>
+            <div class="text-3xl font-bold text-radar-700 mb-6">${formatarPreco(imovel.preco, imovel.finalidade)}</div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.quartos}</div>
+                <div class="text-xs text-gray-500">Quartos</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.banheiros}</div>
+                <div class="text-xs text-gray-500">Banheiros</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.vagas}</div>
+                <div class="text-xs text-gray-500">Vagas</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.area}</div>
+                <div class="text-xs text-gray-500">m²</div>
+              </div>
+            </div>
+
+            <p class="text-gray-600 leading-relaxed mb-8">${imovel.descricao}</p>
+
+            <a href="https://wa.me/5511999999999?text=Olá! Tenho interesse no imóvel: ${encodeURIComponent(imovel.titulo)}"
+               target="_blank"
+               class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl">
+              Falar no WhatsApp sobre este imóvel
+            </a>
+          </div>
+        </div>
+      `;
+
+      mostrarPagina('detalhe');
+    }
+
+    function buscarImoveis() {
+      mostrarPagina('imoveis');
+      filtrarLista();
+    }
+
+    function filtrarLista() {
+      const tipo = document.getElementById('lista-tipo')?.value || '';
+      const finalidade = document.getElementById('lista-finalidade')?.value || '';
+      const busca = (document.getElementById('lista-busca')?.value || '').toLowerCase();
+
+      let filtrados = imoveis;
+
+      if (tipo) filtrados = filtrados.filter(i => i.tipo === tipo);
+      if (finalidade) filtrados = filtrados.filter(i => i.finalidade === finalidade);
+      if (busca) {
+        filtrados = filtrados.filter(i =>
+          i.bairro.toLowerCase().includes(busca) ||
+          i.cidade.toLowerCase().includes(busca) ||
+          i.titulo.toLowerCase().includes(busca)
+        );
+      }
+
+      renderLista(filtrados);
+    }
+
+    // Inicialização
+    renderDestaques();
+    renderLista();
+  </script>
+</body>
+</html>
