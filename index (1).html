@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RadarImob – Imóveis com Inteligência</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            radar: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .page { display: none; }
+    .page.active { display: block; }
+    .admin-page { display: none; }
+    .admin-page.active { display: block; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+  <!-- ==================== ÁREA PÚBLICA ==================== -->
+  <div id="area-publica">
+
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="mostrarPagina('home')">
+          <div class="w-9 h-9 bg-radar-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">R</div>
+          <span class="font-bold text-xl text-radar-800">RadarImob</span>
+        </div>
+
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+          <button onclick="mostrarPagina('home')" class="hover:text-radar-600">Início</button>
+          <button onclick="mostrarPagina('imoveis')" class="hover:text-radar-600">Imóveis</button>
+          <button onclick="mostrarPagina('sobre')" class="hover:text-radar-600">Sobre</button>
+          <button onclick="mostrarPagina('contato')" class="hover:text-radar-600">Contato</button>
+        </nav>
+
+        <div class="flex items-center gap-3">
+          <a href="https://wa.me/5511999999999" target="_blank"
+             class="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            WhatsApp
+          </a>
+          <button onclick="mostrarLogin()" class="text-sm text-radar-600 font-medium hover:underline">
+            Área do Corretor
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section id="page-home" class="page active">
+      <div class="bg-gradient-to-br from-radar-800 to-radar-600 text-white">
+        <div class="max-w-7xl mx-auto px-4 py-16 md:py-24">
+          <div class="max-w-2xl">
+            <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-4">
+              Encontre o imóvel ideal com inteligência
+            </h1>
+            <p class="text-radar-100 text-lg mb-8">
+              Busca inteligente + acompanhamento real do que as pessoas estão olhando.
+            </p>
+
+            <div class="bg-white rounded-xl p-3 flex flex-col md:flex-row gap-3 shadow-lg">
+              <select id="filtro-tipo" class="flex-1 px-4 py-3 rounded-lg text-gray-700 border border-gray-200 text-sm">
+                <option value="">Tipo de imóvel</option>
+                <option value="apartamento">Apartamento</option>
+                <option value="casa">Casa</option>
+                <option value="terreno">Terreno</option>
+                <option value="comercial">Comercial</option>
+              </select>
+              <select id="filtro-finalidade" class="flex-1 px-4 py-3 rounded-lg text-gray-700 border border-gray-200 text-sm">
+                <option value="">Finalidade</option>
+                <option value="venda">Comprar</option>
+                <option value="aluguel">Alugar</option>
+              </select>
+              <input type="text" id="filtro-bairro" placeholder="Bairro ou cidade"
+                     class="flex-1 px-4 py-3 rounded-lg text-gray-700 border border-gray-200 text-sm">
+              <button onclick="buscarImoveis()" class="bg-radar-600 hover:bg-radar-700 text-white font-semibold px-6 py-3 rounded-lg">
+                Buscar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto px-4 py-12">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Imóveis em destaque</h2>
+          <button onclick="mostrarPagina('imoveis')" class="text-radar-600 text-sm font-medium hover:underline">
+            Ver todos →
+          </button>
+        </div>
+        <div id="destaques" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </div>
+    </section>
+
+    <!-- LISTAGEM -->
+    <section id="page-imoveis" class="page">
+      <div class="max-w-7xl mx-auto px-4 py-10">
+        <h1 class="text-2xl font-bold mb-6">Todos os imóveis</h1>
+
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-col md:flex-row gap-3 flex-wrap">
+          <select id="lista-tipo" class="px-4 py-2 border rounded-lg text-sm">
+            <option value="">Todos os tipos</option>
+            <option value="apartamento">Apartamento</option>
+            <option value="casa">Casa</option>
+            <option value="terreno">Terreno</option>
+          </select>
+          <select id="lista-finalidade" class="px-4 py-2 border rounded-lg text-sm">
+            <option value="">Comprar e Alugar</option>
+            <option value="venda">Comprar</option>
+            <option value="aluguel">Alugar</option>
+          </select>
+          <select id="lista-status" class="px-4 py-2 border rounded-lg text-sm">
+            <option value="">Todos os status</option>
+            <option value="lancamento">Lançamento</option>
+            <option value="pronto">Pronto para morar</option>
+            <option value="construcao">Em construção</option>
+            <option value="reforma">Em reforma</option>
+          </select>
+          <input type="text" id="lista-busca" placeholder="Buscar por bairro ou código..." class="flex-1 min-w-[180px] px-4 py-2 border rounded-lg text-sm">
+          <button onclick="filtrarLista()" class="bg-radar-600 text-white px-5 py-2 rounded-lg text-sm font-medium">Filtrar</button>
+        </div>
+
+        <div id="lista-imoveis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </div>
+    </section>
+
+    <!-- DETALHE -->
+    <section id="page-detalhe" class="page">
+      <div class="max-w-6xl mx-auto px-4 py-10">
+        <button onclick="mostrarPagina('imoveis')" class="text-sm text-radar-600 mb-6 hover:underline">← Voltar para imóveis</button>
+        <div id="detalhe-conteudo"></div>
+      </div>
+    </section>
+
+    <!-- SOBRE -->
+    <section id="page-sobre" class="page">
+      <div class="max-w-3xl mx-auto px-4 py-16 text-center">
+        <h1 class="text-3xl font-bold text-radar-800 mb-4">Sobre o RadarImob</h1>
+        <p class="text-gray-600 text-lg leading-relaxed">
+          O RadarImob nasceu para ajudar corretores e imobiliárias a enxergarem o que realmente acontece no site.
+          Não basta só anunciar imóveis. É preciso saber quem está olhando, o que está gerando interesse e onde está sendo deixado dinheiro na mesa.
+        </p>
+      </div>
+    </section>
+
+    <!-- CONTATO -->
+    <section id="page-contato" class="page">
+      <div class="max-w-xl mx-auto px-4 py-16">
+        <h1 class="text-3xl font-bold text-center text-radar-800 mb-8">Fale conosco</h1>
+        <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
+          <p class="text-gray-600 mb-6">Prefere conversar direto?</p>
+          <a href="https://wa.me/5511999999999" target="_blank"
+             class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-8 py-3 rounded-xl">
+            Chamar no WhatsApp
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bg-radar-900 text-white mt-16">
+      <div class="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-radar-500 rounded-lg flex items-center justify-center font-bold text-sm">R</div>
+          <span class="font-semibold">RadarImob</span>
+        </div>
+        <p class="text-sm text-radar-200">© 2026 RadarImob. Todos os direitos reservados.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==================== LOGIN ==================== -->
+  <div id="tela-login" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-radar-900 to-radar-700 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-radar-600 text-white text-2xl font-bold mb-4">R</div>
+        <h1 class="text-2xl font-bold text-radar-800">Área do Corretor</h1>
+        <p class="text-gray-500 text-sm mt-1">Acesse para gerenciar seus imóveis</p>
+      </div>
+
+      <form id="form-login" class="space-y-5" onsubmit="fazerLogin(event)">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+          <input type="email" id="login-email" required
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-radar-500"
+                 placeholder="seu@email.com" value="corretor@radarimob.com">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+          <input type="password" id="login-senha" required
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-radar-500"
+                 placeholder="••••••••" value="123456">
+        </div>
+        <div id="login-erro" class="hidden text-red-600 text-sm text-center"></div>
+        <button type="submit" class="w-full bg-radar-600 hover:bg-radar-700 text-white font-semibold py-3 rounded-lg transition">
+          Entrar
+        </button>
+      </form>
+
+      <p class="text-xs text-gray-400 text-center mt-6">
+        Acesso de demonstração:<br>
+        E-mail: corretor@radarimob.com | Senha: 123456
+      </p>
+
+      <button onclick="voltarParaSite()" class="w-full mt-4 text-sm text-radar-600 hover:underline">
+        ← Voltar para o site
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== PAINEL DO CORRETOR ==================== -->
+  <div id="area-admin" class="hidden min-h-screen flex">
+    <aside class="w-64 bg-radar-900 text-white flex flex-col fixed h-full z-40">
+      <div class="p-5 border-b border-white/10 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-radar-500 flex items-center justify-center font-bold">R</div>
+        <div>
+          <div class="font-semibold text-sm">RadarImob</div>
+          <div class="text-xs text-white/60">Painel do Corretor</div>
+        </div>
+      </div>
+
+      <nav class="flex-1 p-3 space-y-1">
+        <button onclick="mostrarAdmin('dashboard')" data-admin="dashboard"
+                class="admin-link w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm hover:bg-white/10 transition">
+          <span>📊</span> Dashboard
+        </button>
+        <button onclick="mostrarAdmin('imoveis')" data-admin="imoveis"
+                class="admin-link w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm hover:bg-white/10 transition">
+          <span>🏠</span> Meus Imóveis
+        </button>
+        <button onclick="mostrarAdmin('novo')" data-admin="novo"
+                class="admin-link w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm hover:bg-white/10 transition">
+          <span>➕</span> Novo Imóvel
+        </button>
+        <button onclick="mostrarAdmin('leads')" data-admin="leads"
+                class="admin-link w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm hover:bg-white/10 transition">
+          <span>👥</span> Leads
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-white/10">
+        <div class="text-xs text-white/50 mb-2" id="admin-nome">Corretor</div>
+        <button onclick="fazerLogout()" class="w-full text-left text-sm text-red-300 hover:text-red-200 flex items-center gap-2">
+          🚪 Sair
+        </button>
+      </div>
+    </aside>
+
+    <main class="flex-1 ml-64 p-6">
+
+      <!-- DASHBOARD -->
+      <div id="admin-dashboard" class="admin-page active">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-radar-600">
+            <div class="text-sm text-gray-500">Total de Imóveis</div>
+            <div class="text-3xl font-bold text-radar-700 mt-1" id="stat-total">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-green-500">
+            <div class="text-sm text-gray-500">À Venda</div>
+            <div class="text-3xl font-bold text-green-600 mt-1" id="stat-venda">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-amber-500">
+            <div class="text-sm text-gray-500">Para Alugar</div>
+            <div class="text-3xl font-bold text-amber-600 mt-1" id="stat-aluguel">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-purple-500">
+            <div class="text-sm text-gray-500">Leads</div>
+            <div class="text-3xl font-bold text-purple-600 mt-1">0</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6">
+          <h2 class="font-semibold text-lg mb-4">Últimos imóveis cadastrados</h2>
+          <div id="ultimos-imoveis" class="space-y-3 text-sm"></div>
+        </div>
+      </div>
+
+      <!-- LISTA ADMIN -->
+      <div id="admin-imoveis" class="admin-page">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-gray-800">Meus Imóveis</h1>
+          <button onclick="mostrarAdmin('novo')" class="bg-radar-600 hover:bg-radar-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            + Novo Imóvel
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-radar-800 text-white">
+                <tr>
+                  <th class="text-left px-4 py-3">Código</th>
+                  <th class="text-left px-4 py-3">Título</th>
+                  <th class="text-left px-4 py-3">Status</th>
+                  <th class="text-left px-4 py-3">Finalidade</th>
+                  <th class="text-left px-4 py-3">Bairro</th>
+                  <th class="text-left px-4 py-3">Preço</th>
+                  <th class="text-right px-4 py-3">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-admin-imoveis" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+          <div id="sem-imoveis-admin" class="hidden p-8 text-center text-gray-500">Nenhum imóvel cadastrado ainda.</div>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO -->
+      <div id="admin-novo" class="admin-page">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-gray-800" id="form-titulo">Novo Imóvel</h1>
+          <button onclick="mostrarAdmin('imoveis')" class="text-sm text-gray-500 hover:text-radar-600">← Voltar</button>
+        </div>
+
+        <form id="form-imovel" class="bg-white rounded-xl shadow-sm p-6 space-y-6" onsubmit="salvarImovel(event)">
+          <input type="hidden" id="edit-id">
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Código do imóvel</label>
+              <input type="text" id="imovel-codigo" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ex: RI-0012">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Status *</label>
+              <select id="imovel-status" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="pronto">Pronto para morar</option>
+                <option value="lancamento">Lançamento</option>
+                <option value="construcao">Em construção</option>
+                <option value="reforma">Em reforma</option>
+              </select>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium mb-1">Título do imóvel *</label>
+              <input type="text" id="imovel-titulo" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ex: Apartamento 3 quartos – Jardins">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Tipo *</label>
+              <select id="imovel-tipo" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="">Selecione</option>
+                <option value="apartamento">Apartamento</option>
+                <option value="casa">Casa</option>
+                <option value="terreno">Terreno</option>
+                <option value="comercial">Comercial</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Finalidade *</label>
+              <select id="imovel-finalidade" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="">Selecione</option>
+                <option value="venda">Venda</option>
+                <option value="aluguel">Aluguel</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Preço (R$) *</label>
+              <input type="number" id="imovel-preco" required min="0" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ex: 1250000">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Área (m²)</label>
+              <input type="number" id="imovel-area" min="0" class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Quartos</label>
+              <input type="number" id="imovel-quartos" min="0" class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Banheiros</label>
+              <input type="number" id="imovel-banheiros" min="0" class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Vagas</label>
+              <input type="number" id="imovel-vagas" min="0" class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Bairro *</label>
+              <input type="text" id="imovel-bairro" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Cidade *</label>
+              <input type="text" id="imovel-cidade" required class="w-full px-3 py-2 border rounded-lg text-sm" value="São Paulo">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium mb-1">URL da Foto (temporário)</label>
+              <input type="url" id="imovel-foto" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="https://...">
+              <p class="text-xs text-gray-400 mt-1">Por enquanto cole o link de uma imagem. Depois vamos melhorar o upload.</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium mb-1">Descrição</label>
+              <textarea id="imovel-descricao" rows="4" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Descreva o imóvel..."></textarea>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="imovel-destaque" class="w-4 h-4 rounded border-gray-300 text-radar-600">
+                <span class="text-sm font-medium">Marcar como Destaque (aparece na home)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button type="submit" class="bg-radar-600 hover:bg-radar-700 text-white font-semibold px-6 py-2.5 rounded-lg">
+              Salvar Imóvel
+            </button>
+            <button type="button" onclick="mostrarAdmin('imoveis')" class="px-6 py-2.5 border rounded-lg text-gray-600 hover:bg-gray-50">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- LEADS -->
+      <div id="admin-leads" class="admin-page">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Leads</h1>
+        <div class="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
+          <p class="text-lg mb-2">Em breve</p>
+          <p class="text-sm">Aqui vão aparecer as pessoas que entraram em contato e o comportamento de quem visitou os imóveis.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // ===================== DADOS =====================
+    let imoveis = JSON.parse(localStorage.getItem('radar_imoveis')) || [
+      {
+        id: 1,
+        codigo: "RI-0001",
+        status: "pronto",
+        destaque: true,
+        titulo: "Apartamento 3 quartos – Jardins",
+        tipo: "apartamento",
+        finalidade: "venda",
+        bairro: "Jardins",
+        cidade: "São Paulo",
+        preco: 1250000,
+        quartos: 3,
+        banheiros: 2,
+        vagas: 2,
+        area: 120,
+        descricao: "Apartamento amplo e bem localizado, próximo a comércio e transporte.",
+        foto: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop"
+      },
+      {
+        id: 2,
+        codigo: "RI-0002",
+        status: "pronto",
+        destaque: true,
+        titulo: "Casa com quintal – Moema",
+        tipo: "casa",
+        finalidade: "venda",
+        bairro: "Moema",
+        cidade: "São Paulo",
+        preco: 1890000,
+        quartos: 4,
+        banheiros: 3,
+        vagas: 3,
+        area: 220,
+        descricao: "Casa espaçosa com quintal e área gourmet.",
+        foto: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
+      },
+      {
+        id: 3,
+        codigo: "RI-0003",
+        status: "pronto",
+        destaque: false,
+        titulo: "Apartamento 2 quartos – Pinheiros",
+        tipo: "apartamento",
+        finalidade: "aluguel",
+        bairro: "Pinheiros",
+        cidade: "São Paulo",
+        preco: 4500,
+        quartos: 2,
+        banheiros: 1,
+        vagas: 1,
+        area: 68,
+        descricao: "Apartamento moderno e bem iluminado, perfeito para casal.",
+        foto: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop"
+      },
+      {
+        id: 4,
+        codigo: "RI-0004",
+        status: "lancamento",
+        destaque: true,
+        titulo: "Cobertura duplex – Itaim Bibi",
+        tipo: "apartamento",
+        finalidade: "venda",
+        bairro: "Itaim Bibi",
+        cidade: "São Paulo",
+        preco: 3200000,
+        quartos: 4,
+        banheiros: 4,
+        vagas: 3,
+        area: 280,
+        descricao: "Cobertura de alto padrão com vista privilegiada.",
+        foto: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop"
+      },
+      {
+        id: 5,
+        codigo: "RI-0005",
+        status: "construcao",
+        destaque: false,
+        titulo: "Studio moderno – Vila Madalena",
+        tipo: "apartamento",
+        finalidade: "aluguel",
+        bairro: "Vila Madalena",
+        cidade: "São Paulo",
+        preco: 3200,
+        quartos: 1,
+        banheiros: 1,
+        vagas: 1,
+        area: 42,
+        descricao: "Studio compacto e bem localizado.",
+        foto: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop"
+      },
+      {
+        id: 6,
+        codigo: "RI-0006",
+        status: "pronto",
+        destaque: false,
+        titulo: "Casa em condomínio – Alphaville",
+        tipo: "casa",
+        finalidade: "venda",
+        bairro: "Alphaville",
+        cidade: "Barueri",
+        preco: 2450000,
+        quartos: 4,
+        banheiros: 5,
+        vagas: 4,
+        area: 350,
+        descricao: "Casa em condomínio fechado com lazer completo.",
+        foto: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop"
+      }
+    ];
+
+    let proximoId = imoveis.length > 0 ? Math.max(...imoveis.map(i => i.id)) + 1 : 1;
+    let usuarioLogado = null;
+
+    const STATUS_LABEL = {
+      lancamento: "Lançamento",
+      pronto: "Pronto para morar",
+      construcao: "Em construção",
+      reforma: "Em reforma"
+    };
+
+    const STATUS_COR = {
+      lancamento: "bg-blue-600",
+      pronto: "bg-green-600",
+      construcao: "bg-gray-600",
+      reforma: "bg-amber-600"
+    };
+
+    // ===================== FUNÇÕES PÚBLICAS =====================
+    function formatarPreco(valor, finalidade) {
+      if (finalidade === 'aluguel') {
+        return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) + '/mês';
+      }
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function tarjaStatus(status) {
+      if (!status || !STATUS_LABEL[status]) return '';
+      return `<span class="absolute top-3 left-3 ${STATUS_COR[status]} text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow">${STATUS_LABEL[status]}</span>`;
+    }
+
+    function criarCard(imovel) {
+      return `
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer relative" onclick="abrirDetalhe(${imovel.id})">
+          <div class="aspect-[4/3] overflow-hidden bg-gray-100 relative">
+            <img src="${imovel.foto || 'https://via.placeholder.com/800x600?text=Sem+Foto'}" alt="${imovel.titulo}" class="w-full h-full object-cover hover:scale-105 transition duration-300" onerror="this.src='https://via.placeholder.com/800x600?text=Sem+Foto'">
+            ${tarjaStatus(imovel.status)}
+            ${imovel.destaque ? '<span class="absolute top-3 right-3 bg-radar-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow">Destaque</span>' : ''}
+          </div>
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-xs font-medium text-radar-600 uppercase">${imovel.finalidade === 'venda' ? 'Venda' : 'Aluguel'}</div>
+              ${imovel.codigo ? `<div class="text-xs text-gray-400 font-mono">${imovel.codigo}</div>` : ''}
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 line-clamp-1">${imovel.titulo}</h3>
+            <p class="text-sm text-gray-500 mb-3">${imovel.bairro}, ${imovel.cidade}</p>
+            <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+              <span>${imovel.quartos || 0} quartos</span>
+              <span>•</span>
+              <span>${imovel.banheiros || 0} banheiros</span>
+              <span>•</span>
+              <span>${imovel.area || 0} m²</span>
+            </div>
+            <div class="font-bold text-radar-700 text-lg">${formatarPreco(imovel.preco, imovel.finalidade)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDestaques() {
+      const container = document.getElementById('destaques');
+      if (!container) return;
+      const lista = imoveis.filter(i => i.destaque).slice(0, 3);
+      const final = lista.length ? lista : imoveis.slice(0, 3);
+      container.innerHTML = final.map(criarCard).join('');
+    }
+
+    function renderLista(lista = imoveis) {
+      const container = document.getElementById('lista-imoveis');
+      if (!container) return;
+      if (lista.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-10">Nenhum imóvel encontrado.</p>';
+        return;
+      }
+      container.innerHTML = lista.map(criarCard).join('');
+    }
+
+    function mostrarPagina(nome) {
+      document.querySelectorAll('#area-publica .page').forEach(p => p.classList.remove('active'));
+      const page = document.getElementById('page-' + nome);
+      if (page) page.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function abrirDetalhe(id) {
+      const imovel = imoveis.find(i => i.id === id);
+      if (!imovel) return;
+
+      const container = document.getElementById('detalhe-conteudo');
+      container.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="rounded-2xl overflow-hidden bg-gray-100 relative">
+            <img src="${imovel.foto || 'https://via.placeholder.com/800x600?text=Sem+Foto'}" alt="${imovel.titulo}" class="w-full h-full object-cover aspect-[4/3]" onerror="this.src='https://via.placeholder.com/800x600?text=Sem+Foto'">
+            ${tarjaStatus(imovel.status)}
+          </div>
+          <div>
+            <div class="flex items-center gap-3 mb-2 flex-wrap">
+              <span class="text-sm font-medium text-radar-600 uppercase">${imovel.finalidade === 'venda' ? 'Venda' : 'Aluguel'}</span>
+              ${imovel.codigo ? `<span class="text-sm text-gray-400 font-mono">Cód: ${imovel.codigo}</span>` : ''}
+              ${imovel.destaque ? '<span class="text-xs bg-radar-100 text-radar-700 px-2 py-0.5 rounded font-medium">Destaque</span>' : ''}
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">${imovel.titulo}</h1>
+            <p class="text-gray-500 mb-4">${imovel.bairro}, ${imovel.cidade}</p>
+            <div class="text-3xl font-bold text-radar-700 mb-6">${formatarPreco(imovel.preco, imovel.finalidade)}</div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.quartos || 0}</div>
+                <div class="text-xs text-gray-500">Quartos</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.banheiros || 0}</div>
+                <div class="text-xs text-gray-500">Banheiros</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.vagas || 0}</div>
+                <div class="text-xs text-gray-500">Vagas</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 text-center">
+                <div class="text-xl font-bold text-gray-800">${imovel.area || 0}</div>
+                <div class="text-xs text-gray-500">m²</div>
+              </div>
+            </div>
+
+            <p class="text-gray-600 leading-relaxed mb-8">${imovel.descricao || ''}</p>
+
+            <a href="https://wa.me/5511999999999?text=${encodeURIComponent('Olá! Tenho interesse no imóvel ' + (imovel.codigo || '') + ' - ' + imovel.titulo)}"
+               target="_blank"
+               class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl">
+              Falar no WhatsApp sobre este imóvel
+            </a>
+          </div>
+        </div>
+      `;
+      mostrarPagina('detalhe');
+    }
+
+    function buscarImoveis() {
+      mostrarPagina('imoveis');
+      filtrarLista();
+    }
+
+    function filtrarLista() {
+      const tipo = document.getElementById('lista-tipo')?.value || '';
+      const finalidade = document.getElementById('lista-finalidade')?.value || '';
+      const status = document.getElementById('lista-status')?.value || '';
+      const busca = (document.getElementById('lista-busca')?.value || '').toLowerCase();
+
+      let filtrados = imoveis;
+      if (tipo) filtrados = filtrados.filter(i => i.tipo === tipo);
+      if (finalidade) filtrados = filtrados.filter(i => i.finalidade === finalidade);
+      if (status) filtrados = filtrados.filter(i => i.status === status);
+      if (busca) {
+        filtrados = filtrados.filter(i =>
+          (i.bairro || '').toLowerCase().includes(busca) ||
+          (i.cidade || '').toLowerCase().includes(busca) ||
+          (i.titulo || '').toLowerCase().includes(busca) ||
+          (i.codigo || '').toLowerCase().includes(busca)
+        );
+      }
+      renderLista(filtrados);
+    }
+
+    // ===================== LOGIN / ADMIN =====================
+    function mostrarLogin() {
+      document.getElementById('area-publica').classList.add('hidden');
+      document.getElementById('area-admin').classList.add('hidden');
+      document.getElementById('tela-login').classList.remove('hidden');
+    }
+
+    function voltarParaSite() {
+      document.getElementById('tela-login').classList.add('hidden');
+      document.getElementById('area-admin').classList.add('hidden');
+      document.getElementById('area-publica').classList.remove('hidden');
+      mostrarPagina('home');
+    }
+
+    function fazerLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const senha = document.getElementById('login-senha').value;
+      const erro = document.getElementById('login-erro');
+
+      if (email === 'corretor@radarimob.com' && senha === '123456') {
+        usuarioLogado = { email, nome: 'Corretor Demo' };
+        document.getElementById('tela-login').classList.add('hidden');
+        document.getElementById('area-publica').classList.add('hidden');
+        document.getElementById('area-admin').classList.remove('hidden');
+        document.getElementById('admin-nome').textContent = usuarioLogado.nome;
+        atualizarAdmin();
+        mostrarAdmin('dashboard');
+        erro.classList.add('hidden');
+      } else {
+        erro.textContent = 'E-mail ou senha incorretos.';
+        erro.classList.remove('hidden');
+      }
+    }
+
+    function fazerLogout() {
+      usuarioLogado = null;
+      document.getElementById('area-admin').classList.add('hidden');
+      document.getElementById('area-publica').classList.remove('hidden');
+      mostrarPagina('home');
+    }
+
+    function mostrarAdmin(nome) {
+      document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
+      const page = document.getElementById('admin-' + nome);
+      if (page) page.classList.add('active');
+
+      document.querySelectorAll('.admin-link').forEach(btn => {
+        btn.classList.remove('bg-white/10');
+        if (btn.getAttribute('data-admin') === nome) btn.classList.add('bg-white/10');
+      });
+
+      if (nome === 'novo') {
+        limparFormImovel();
+        document.getElementById('form-titulo').textContent = 'Novo Imóvel';
+      }
+      if (nome === 'imoveis' || nome === 'dashboard') atualizarAdmin();
+    }
+
+    function atualizarAdmin() {
+      document.getElementById('stat-total').textContent = imoveis.length;
+      document.getElementById('stat-venda').textContent = imoveis.filter(i => i.finalidade === 'venda').length;
+      document.getElementById('stat-aluguel').textContent = imoveis.filter(i => i.finalidade === 'aluguel').length;
+
+      const ultimos = document.getElementById('ultimos-imoveis');
+      if (ultimos) {
+        const lista = [...imoveis].reverse().slice(0, 5);
+        ultimos.innerHTML = lista.length
+          ? lista.map(i => `<div class="flex justify-between border-b border-gray-100 py-2"><span>${i.codigo ? i.codigo + ' – ' : ''}${i.titulo}</span><span class="text-radar-600 font-medium">${formatarPreco(i.preco, i.finalidade)}</span></div>`).join('')
+          : '<p class="text-gray-400">Nenhum imóvel ainda.</p>';
+      }
+
+      const tbody = document.getElementById('tabela-admin-imoveis');
+      const sem = document.getElementById('sem-imoveis-admin');
+      if (!tbody) return;
+
+      if (imoveis.length === 0) {
+        tbody.innerHTML = '';
+        if (sem) sem.classList.remove('hidden');
+        return;
+      }
+      if (sem) sem.classList.add('hidden');
+
+      tbody.innerHTML = imoveis.map(i => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-mono text-xs text-gray-500">${i.codigo || '—'}</td>
+          <td class="px-4 py-3 font-medium">${i.titulo}</td>
+          <td class="px-4 py-3">
+            <span class="text-xs ${STATUS_COR[i.status] || 'bg-gray-500'} text-white px-2 py-0.5 rounded">${STATUS_LABEL[i.status] || i.status || '—'}</span>
+          </td>
+          <td class="px-4 py-3 capitalize">${i.finalidade}</td>
+          <td class="px-4 py-3">${i.bairro}</td>
+          <td class="px-4 py-3 font-medium text-radar-700">${formatarPreco(i.preco, i.finalidade)}</td>
+          <td class="px-4 py-3 text-right space-x-2">
+            <button onclick="editarImovel(${i.id})" class="text-radar-600 hover:underline text-sm">Editar</button>
+            <button onclick="excluirImovel(${i.id})" class="text-red-500 hover:underline text-sm">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function limparFormImovel() {
+      document.getElementById('edit-id').value = '';
+      document.getElementById('form-imovel').reset();
+      document.getElementById('imovel-cidade').value = 'São Paulo';
+      document.getElementById('imovel-status').value = 'pronto';
+    }
+
+    function salvarImovel(e) {
+      e.preventDefault();
+
+      const idEdit = document.getElementById('edit-id').value;
+      const dados = {
+        codigo: document.getElementById('imovel-codigo').value.trim() || null,
+        status: document.getElementById('imovel-status').value,
+        destaque: document.getElementById('imovel-destaque').checked,
+        titulo: document.getElementById('imovel-titulo').value.trim(),
+        tipo: document.getElementById('imovel-tipo').value,
+        finalidade: document.getElementById('imovel-finalidade').value,
+        preco: Number(document.getElementById('imovel-preco').value) || 0,
+        area: Number(document.getElementById('imovel-area').value) || 0,
+        quartos: Number(document.getElementById('imovel-quartos').value) || 0,
+        banheiros: Number(document.getElementById('imovel-banheiros').value) || 0,
+        vagas: Number(document.getElementById('imovel-vagas').value) || 0,
+        bairro: document.getElementById('imovel-bairro').value.trim(),
+        cidade: document.getElementById('imovel-cidade').value.trim(),
+        foto: document.getElementById('imovel-foto').value.trim(),
+        descricao: document.getElementById('imovel-descricao').value.trim()
+      };
+
+      if (idEdit) {
+        const idx = imoveis.findIndex(i => i.id === Number(idEdit));
+        if (idx >= 0) {
+          imoveis[idx] = { ...imoveis[idx], ...dados };
+        }
+      } else {
+        dados.id = proximoId++;
+        if (!dados.codigo) dados.codigo = 'RI-' + String(dados.id).padStart(4, '0');
+        imoveis.push(dados);
+      }
+
+      localStorage.setItem('radar_imoveis', JSON.stringify(imoveis));
+
+      renderDestaques();
+      renderLista();
+
+      alert(idEdit ? 'Imóvel atualizado com sucesso!' : 'Imóvel cadastrado com sucesso!');
+      mostrarAdmin('imoveis');
+    }
+
+    function editarImovel(id) {
+      const imovel = imoveis.find(i => i.id === id);
+      if (!imovel) return;
+
+      document.getElementById('edit-id').value = imovel.id;
+      document.getElementById('imovel-codigo').value = imovel.codigo || '';
+      document.getElementById('imovel-status').value = imovel.status || 'pronto';
+      document.getElementById('imovel-destaque').checked = !!imovel.destaque;
+      document.getElementById('imovel-titulo').value = imovel.titulo || '';
+      document.getElementById('imovel-tipo').value = imovel.tipo || '';
+      document.getElementById('imovel-finalidade').value = imovel.finalidade || '';
+      document.getElementById('imovel-preco').value = imovel.preco || '';
+      document.getElementById('imovel-area').value = imovel.area || '';
+      document.getElementById('imovel-quartos').value = imovel.quartos || '';
+      document.getElementById('imovel-banheiros').value = imovel.banheiros || '';
+      document.getElementById('imovel-vagas').value = imovel.vagas || '';
+      document.getElementById('imovel-bairro').value = imovel.bairro || '';
+      document.getElementById('imovel-cidade').value = imovel.cidade || '';
+      document.getElementById('imovel-foto').value = imovel.foto || '';
+      document.getElementById('imovel-descricao').value = imovel.descricao || '';
+
+      document.getElementById('form-titulo').textContent = 'Editar Imóvel';
+      mostrarAdmin('novo');
+    }
+
+    function excluirImovel(id) {
+      if (!confirm('Tem certeza que deseja excluir este imóvel?')) return;
+      imoveis = imoveis.filter(i => i.id !== id);
+      localStorage.setItem('radar_imoveis', JSON.stringify(imoveis));
+      renderDestaques();
+      renderLista();
+      atualizarAdmin();
+    }
+
+    // Inicialização
+    renderDestaques();
+    renderLista();
+  </script>
+</body>
+</html>
