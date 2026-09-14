@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RadarImob – Imóveis com Inteligência</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -104,7 +105,9 @@
             Ver todos →
           </button>
         </div>
-        <div id="destaques" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="destaques" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <p class="text-gray-400 col-span-full text-center py-8">Carregando imóveis...</p>
+        </div>
       </div>
     </section>
 
@@ -136,7 +139,9 @@
           <button onclick="filtrarLista()" class="bg-radar-600 text-white px-5 py-2 rounded-lg text-sm font-medium">Filtrar</button>
         </div>
 
-        <div id="lista-imoveis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="lista-imoveis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <p class="text-gray-400 col-span-full text-center py-8">Carregando imóveis...</p>
+        </div>
       </div>
     </section>
 
@@ -263,7 +268,6 @@
 
     <main class="flex-1 ml-64 p-6">
 
-      <!-- DASHBOARD -->
       <div id="admin-dashboard" class="admin-page active">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -290,7 +294,6 @@
         </div>
       </div>
 
-      <!-- LISTA ADMIN -->
       <div id="admin-imoveis" class="admin-page">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-800">Meus Imóveis</h1>
@@ -320,7 +323,6 @@
         </div>
       </div>
 
-      <!-- FORMULÁRIO -->
       <div id="admin-novo" class="admin-page">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-800" id="form-titulo">Novo Imóvel</h1>
@@ -426,7 +428,7 @@
           </div>
 
           <div class="flex gap-3 pt-2">
-            <button type="submit" class="bg-radar-600 hover:bg-radar-700 text-white font-semibold px-6 py-2.5 rounded-lg">
+            <button type="submit" id="btn-salvar" class="bg-radar-600 hover:bg-radar-700 text-white font-semibold px-6 py-2.5 rounded-lg">
               Salvar Imóvel
             </button>
             <button type="button" onclick="mostrarAdmin('imoveis')" class="px-6 py-2.5 border rounded-lg text-gray-600 hover:bg-gray-50">
@@ -436,7 +438,6 @@
         </form>
       </div>
 
-      <!-- LEADS -->
       <div id="admin-leads" class="admin-page">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">Leads</h1>
         <div class="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
@@ -449,119 +450,13 @@
   </div>
 
   <script>
-    // ===================== DADOS =====================
-    let imoveis = JSON.parse(localStorage.getItem('radar_imoveis')) || [
-      {
-        id: 1,
-        codigo: "RI-0001",
-        status: "pronto",
-        destaque: true,
-        titulo: "Apartamento 3 quartos – Jardins",
-        tipo: "apartamento",
-        finalidade: "venda",
-        bairro: "Jardins",
-        cidade: "São Paulo",
-        preco: 1250000,
-        quartos: 3,
-        banheiros: 2,
-        vagas: 2,
-        area: 120,
-        descricao: "Apartamento amplo e bem localizado, próximo a comércio e transporte.",
-        foto: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop"
-      },
-      {
-        id: 2,
-        codigo: "RI-0002",
-        status: "pronto",
-        destaque: true,
-        titulo: "Casa com quintal – Moema",
-        tipo: "casa",
-        finalidade: "venda",
-        bairro: "Moema",
-        cidade: "São Paulo",
-        preco: 1890000,
-        quartos: 4,
-        banheiros: 3,
-        vagas: 3,
-        area: 220,
-        descricao: "Casa espaçosa com quintal e área gourmet.",
-        foto: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop"
-      },
-      {
-        id: 3,
-        codigo: "RI-0003",
-        status: "pronto",
-        destaque: false,
-        titulo: "Apartamento 2 quartos – Pinheiros",
-        tipo: "apartamento",
-        finalidade: "aluguel",
-        bairro: "Pinheiros",
-        cidade: "São Paulo",
-        preco: 4500,
-        quartos: 2,
-        banheiros: 1,
-        vagas: 1,
-        area: 68,
-        descricao: "Apartamento moderno e bem iluminado, perfeito para casal.",
-        foto: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop"
-      },
-      {
-        id: 4,
-        codigo: "RI-0004",
-        status: "lancamento",
-        destaque: true,
-        titulo: "Cobertura duplex – Itaim Bibi",
-        tipo: "apartamento",
-        finalidade: "venda",
-        bairro: "Itaim Bibi",
-        cidade: "São Paulo",
-        preco: 3200000,
-        quartos: 4,
-        banheiros: 4,
-        vagas: 3,
-        area: 280,
-        descricao: "Cobertura de alto padrão com vista privilegiada.",
-        foto: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop"
-      },
-      {
-        id: 5,
-        codigo: "RI-0005",
-        status: "construcao",
-        destaque: false,
-        titulo: "Studio moderno – Vila Madalena",
-        tipo: "apartamento",
-        finalidade: "aluguel",
-        bairro: "Vila Madalena",
-        cidade: "São Paulo",
-        preco: 3200,
-        quartos: 1,
-        banheiros: 1,
-        vagas: 1,
-        area: 42,
-        descricao: "Studio compacto e bem localizado.",
-        foto: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop"
-      },
-      {
-        id: 6,
-        codigo: "RI-0006",
-        status: "pronto",
-        destaque: false,
-        titulo: "Casa em condomínio – Alphaville",
-        tipo: "casa",
-        finalidade: "venda",
-        bairro: "Alphaville",
-        cidade: "Barueri",
-        preco: 2450000,
-        quartos: 4,
-        banheiros: 5,
-        vagas: 4,
-        area: 350,
-        descricao: "Casa em condomínio fechado com lazer completo.",
-        foto: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop"
-      }
-    ];
+    // ===================== SUPABASE =====================
+    const SUPABASE_URL = 'https://nrlhexphqglhzhwhwloi.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ybGhleHBocWdsaHpod2h3bG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDM5MjgsImV4cCI6MjEwNDk3OTkyOH0.4WWLtX7SHjMseRF69XWqtBzRzZB08GQ0KRreQEn4qP8';
 
-    let proximoId = imoveis.length > 0 ? Math.max(...imoveis.map(i => i.id)) + 1 : 1;
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let imoveis = [];
     let usuarioLogado = null;
 
     const STATUS_LABEL = {
@@ -578,6 +473,26 @@
       reforma: "bg-amber-600"
     };
 
+    // ===================== CARREGAR IMÓVEIS =====================
+    async function carregarImoveis() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('imoveis')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        imoveis = data || [];
+        renderDestaques();
+        renderLista();
+        if (usuarioLogado) atualizarAdmin();
+      } catch (err) {
+        console.error('Erro ao carregar imóveis:', err);
+        document.getElementById('destaques').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">Erro ao carregar imóveis. Verifique a conexão.</p>';
+        document.getElementById('lista-imoveis').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">Erro ao carregar imóveis.</p>';
+      }
+    }
+
     // ===================== FUNÇÕES PÚBLICAS =====================
     function formatarPreco(valor, finalidade) {
       if (finalidade === 'aluguel') {
@@ -593,7 +508,7 @@
 
     function criarCard(imovel) {
       return `
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer relative" onclick="abrirDetalhe(${imovel.id})">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer relative" onclick="abrirDetalhe('${imovel.id}')">
           <div class="aspect-[4/3] overflow-hidden bg-gray-100 relative">
             <img src="${imovel.foto || 'https://via.placeholder.com/800x600?text=Sem+Foto'}" alt="${imovel.titulo}" class="w-full h-full object-cover hover:scale-105 transition duration-300" onerror="this.src='https://via.placeholder.com/800x600?text=Sem+Foto'">
             ${tarjaStatus(imovel.status)}
@@ -605,7 +520,7 @@
               ${imovel.codigo ? `<div class="text-xs text-gray-400 font-mono">${imovel.codigo}</div>` : ''}
             </div>
             <h3 class="font-semibold text-gray-900 mb-1 line-clamp-1">${imovel.titulo}</h3>
-            <p class="text-sm text-gray-500 mb-3">${imovel.bairro}, ${imovel.cidade}</p>
+            <p class="text-sm text-gray-500 mb-3">${imovel.bairro || ''}, ${imovel.cidade || ''}</p>
             <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
               <span>${imovel.quartos || 0} quartos</span>
               <span>•</span>
@@ -624,6 +539,10 @@
       if (!container) return;
       const lista = imoveis.filter(i => i.destaque).slice(0, 3);
       const final = lista.length ? lista : imoveis.slice(0, 3);
+      if (final.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 col-span-full text-center py-8">Nenhum imóvel cadastrado ainda.</p>';
+        return;
+      }
       container.innerHTML = final.map(criarCard).join('');
     }
 
@@ -662,7 +581,7 @@
               ${imovel.destaque ? '<span class="text-xs bg-radar-100 text-radar-700 px-2 py-0.5 rounded font-medium">Destaque</span>' : ''}
             </div>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">${imovel.titulo}</h1>
-            <p class="text-gray-500 mb-4">${imovel.bairro}, ${imovel.cidade}</p>
+            <p class="text-gray-500 mb-4">${imovel.bairro || ''}, ${imovel.cidade || ''}</p>
             <div class="text-3xl font-bold text-radar-700 mb-6">${formatarPreco(imovel.preco, imovel.finalidade)}</div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -789,7 +708,7 @@
 
       const ultimos = document.getElementById('ultimos-imoveis');
       if (ultimos) {
-        const lista = [...imoveis].reverse().slice(0, 5);
+        const lista = [...imoveis].slice(0, 5);
         ultimos.innerHTML = lista.length
           ? lista.map(i => `<div class="flex justify-between border-b border-gray-100 py-2"><span>${i.codigo ? i.codigo + ' – ' : ''}${i.titulo}</span><span class="text-radar-600 font-medium">${formatarPreco(i.preco, i.finalidade)}</span></div>`).join('')
           : '<p class="text-gray-400">Nenhum imóvel ainda.</p>';
@@ -813,12 +732,12 @@
           <td class="px-4 py-3">
             <span class="text-xs ${STATUS_COR[i.status] || 'bg-gray-500'} text-white px-2 py-0.5 rounded">${STATUS_LABEL[i.status] || i.status || '—'}</span>
           </td>
-          <td class="px-4 py-3 capitalize">${i.finalidade}</td>
-          <td class="px-4 py-3">${i.bairro}</td>
+          <td class="px-4 py-3 capitalize">${i.finalidade || ''}</td>
+          <td class="px-4 py-3">${i.bairro || ''}</td>
           <td class="px-4 py-3 font-medium text-radar-700">${formatarPreco(i.preco, i.finalidade)}</td>
           <td class="px-4 py-3 text-right space-x-2">
-            <button onclick="editarImovel(${i.id})" class="text-radar-600 hover:underline text-sm">Editar</button>
-            <button onclick="excluirImovel(${i.id})" class="text-red-500 hover:underline text-sm">Excluir</button>
+            <button onclick="editarImovel('${i.id}')" class="text-radar-600 hover:underline text-sm">Editar</button>
+            <button onclick="excluirImovel('${i.id}')" class="text-red-500 hover:underline text-sm">Excluir</button>
           </td>
         </tr>
       `).join('');
@@ -831,8 +750,11 @@
       document.getElementById('imovel-status').value = 'pronto';
     }
 
-    function salvarImovel(e) {
+    async function salvarImovel(e) {
       e.preventDefault();
+      const btn = document.getElementById('btn-salvar');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
 
       const idEdit = document.getElementById('edit-id').value;
       const dados = {
@@ -849,28 +771,32 @@
         vagas: Number(document.getElementById('imovel-vagas').value) || 0,
         bairro: document.getElementById('imovel-bairro').value.trim(),
         cidade: document.getElementById('imovel-cidade').value.trim(),
-        foto: document.getElementById('imovel-foto').value.trim(),
-        descricao: document.getElementById('imovel-descricao').value.trim()
+        foto: document.getElementById('imovel-foto').value.trim() || null,
+        descricao: document.getElementById('imovel-descricao').value.trim() || null
       };
 
-      if (idEdit) {
-        const idx = imoveis.findIndex(i => i.id === Number(idEdit));
-        if (idx >= 0) {
-          imoveis[idx] = { ...imoveis[idx], ...dados };
+      try {
+        if (idEdit) {
+          const { error } = await supabaseClient.from('imoveis').update(dados).eq('id', idEdit);
+          if (error) throw error;
+        } else {
+          if (!dados.codigo) {
+            dados.codigo = 'RI-' + String(Date.now()).slice(-6);
+          }
+          const { error } = await supabaseClient.from('imoveis').insert([dados]);
+          if (error) throw error;
         }
-      } else {
-        dados.id = proximoId++;
-        if (!dados.codigo) dados.codigo = 'RI-' + String(dados.id).padStart(4, '0');
-        imoveis.push(dados);
+
+        await carregarImoveis();
+        alert(idEdit ? 'Imóvel atualizado com sucesso!' : 'Imóvel cadastrado com sucesso!');
+        mostrarAdmin('imoveis');
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar: ' + (err.message || 'Tente novamente'));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar Imóvel';
       }
-
-      localStorage.setItem('radar_imoveis', JSON.stringify(imoveis));
-
-      renderDestaques();
-      renderLista();
-
-      alert(idEdit ? 'Imóvel atualizado com sucesso!' : 'Imóvel cadastrado com sucesso!');
-      mostrarAdmin('imoveis');
     }
 
     function editarImovel(id) {
@@ -898,18 +824,19 @@
       mostrarAdmin('novo');
     }
 
-    function excluirImovel(id) {
+    async function excluirImovel(id) {
       if (!confirm('Tem certeza que deseja excluir este imóvel?')) return;
-      imoveis = imoveis.filter(i => i.id !== id);
-      localStorage.setItem('radar_imoveis', JSON.stringify(imoveis));
-      renderDestaques();
-      renderLista();
-      atualizarAdmin();
+      try {
+        const { error } = await supabaseClient.from('imoveis').delete().eq('id', id);
+        if (error) throw error;
+        await carregarImoveis();
+      } catch (err) {
+        alert('Erro ao excluir: ' + (err.message || 'Tente novamente'));
+      }
     }
 
     // Inicialização
-    renderDestaques();
-    renderLista();
+    carregarImoveis();
   </script>
 </body>
 </html>
