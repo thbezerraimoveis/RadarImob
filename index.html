@@ -871,6 +871,34 @@
       alert('Chave removida.');
     }
 
+    async function listarModelosGroq(key) {
+      const res = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + key }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Erro ao listar modelos');
+      const ids = (data.data || []).map(m => m.id).filter(Boolean);
+      // Preferência de modelos de chat (texto)
+      const preferidos = [
+        'llama-3.1-8b-instant',
+        'llama-3.3-70b-versatile',
+        'llama3-8b-8192',
+        'llama3-70b-8192',
+        'gemma2-9b-it',
+        'mixtral-8x7b-32768',
+        'openai/gpt-oss-20b',
+        'openai/gpt-oss-120b'
+      ];
+      for (const p of preferidos) {
+        if (ids.includes(p)) return p;
+      }
+      // Qualquer modelo que não seja whisper/guard
+      const chat = ids.find(id => !/whisper|guard|tts|prompt-guard/i.test(id));
+      if (chat) return chat;
+      if (ids.length) return ids[0];
+      throw new Error('Nenhum modelo disponível nesta chave');
+    }
+
     async function testarChaveIA() {
       const key = (document.getElementById('config-groq-key').value || '').trim() || getGroqKey();
       if (!key) {
@@ -883,6 +911,10 @@
         status.className = 'text-sm text-gray-500';
       }
       try {
+        const modelo = await listarModelosGroq(key);
+        localStorage.setItem('radar_groq_key', key);
+        localStorage.setItem('radar_groq_model', modelo);
+
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -890,19 +922,19 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
+            model: modelo,
             messages: [{ role: 'user', content: 'Responda apenas: OK' }],
             max_tokens: 10
           })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error?.message || 'Erro HTTP ' + response.status);
-        localStorage.setItem('radar_groq_key', key);
+
         if (status) {
-          status.textContent = '✓ Conexão OK';
+          status.textContent = '✓ OK — modelo: ' + modelo;
           status.className = 'text-sm text-green-600';
         }
-        alert('Conexão com a Groq OK!');
+        alert('Conexão OK!\nModelo usado: ' + modelo);
       } catch (err) {
         if (status) {
           status.textContent = '✗ ' + (err.message || 'Falha');
@@ -910,6 +942,10 @@
         }
         alert('Erro: ' + (err.message || 'Tente novamente'));
       }
+    }
+
+    function getGroqModel() {
+      return localStorage.getItem('radar_groq_model') || 'llama-3.1-8b-instant';
     }
 
     function atualizarAdmin() {
@@ -1050,6 +1086,14 @@ Regras:
 - Retorne APENAS a descrição, sem título nem explicações`;
 
       try {
+        let modelo = getGroqModel();
+        try {
+          modelo = await listarModelosGroq(apiKey);
+          localStorage.setItem('radar_groq_model', modelo);
+        } catch (e) {
+          // mantém o modelo salvo se a listagem falhar
+        }
+
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -1057,7 +1101,7 @@ Regras:
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
+            model: modelo,
             messages: [
               { role: 'system', content: 'Você escreve descrições de imóveis profissionais e atrativas em português do Brasil.' },
               { role: 'user', content: prompt }
