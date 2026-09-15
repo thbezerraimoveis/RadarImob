@@ -890,7 +890,7 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama-3.1-8b-instant',
             messages: [{ role: 'user', content: 'Responda apenas: OK' }],
             max_tokens: 10
           })
@@ -1057,7 +1057,7 @@ Regras:
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama-3.1-8b-instant',
             messages: [
               { role: 'system', content: 'Você escreve descrições de imóveis profissionais e atrativas em português do Brasil.' },
               { role: 'user', content: prompt }
