@@ -1348,7 +1348,172 @@ Regras:
       }
     });
 
+    // ===================== CHAT IA CONSULTIVO =====================
+    let chatAberto = false;
+    let chatHistorico = [];
+    let chatProcessando = false;
+
+    function resumoImoveisParaIA() {
+      if (!imoveis.length) return 'Nenhum imóvel cadastrado no momento.';
+      return imoveis.slice(0, 25).map(i => {
+        return `- ID:${i.id} | Cód:${i.codigo || '—'} | ${i.titulo} | ${i.tipo || ''} | ${i.finalidade || ''} | ${i.quartos || 0} quartos | ${i.banheiros || 0} banheiros | ${i.area || 0}m² | ${i.bairro || ''}, ${i.cidade || ''} | ${formatarPreco(i.preco, i.finalidade)} | views:${i.views || 0}`;
+      }).join('\n');
+    }
+
+    function toggleChatIA() {
+      chatAberto = !chatAberto;
+      const painel = document.getElementById('chat-painel');
+      const btn = document.getElementById('chat-btn');
+      if (!painel) return;
+      if (chatAberto) {
+        painel.classList.remove('hidden');
+        if (btn) btn.classList.add('hidden');
+        const msgs = document.getElementById('chat-mensagens');
+        if (msgs && msgs.children.length === 0) {
+          adicionarMsgChat('ia', 'Olá! Eu sou o Radar, da RadarImob. Estou aqui pra te ajudar a achar o imóvel certo.\n\nPosso te fazer algumas perguntas rápidas? Ou me conta direto o que você procura (bairro, quartos, orçamento...).');
+        }
+        document.getElementById('chat-input')?.focus();
+      } else {
+        painel.classList.add('hidden');
+        if (btn) btn.classList.remove('hidden');
+      }
+    }
+
+    function adicionarMsgChat(tipo, texto) {
+      const box = document.getElementById('chat-mensagens');
+      if (!box) return;
+      const div = document.createElement('div');
+      div.className = tipo === 'user'
+        ? 'ml-8 bg-radar-600 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm whitespace-pre-line'
+        : 'mr-8 bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md px-3 py-2 text-sm whitespace-pre-line shadow-sm';
+      div.textContent = texto;
+      box.appendChild(div);
+
+      // Links para imóveis mencionados por ID no texto da IA
+      const ids = [...texto.matchAll(/ID:([a-f0-9-]{8,})/gi)].map(m => m[1]);
+      const unicos = [...new Set(ids)];
+      unicos.forEach(id => {
+        const im = imoveis.find(x => x.id === id);
+        if (!im) return;
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'mt-2 block w-full text-left text-xs bg-radar-50 hover:bg-radar-100 text-radar-700 border border-radar-200 rounded-lg px-3 py-2';
+        link.textContent = 'Ver: ' + (im.codigo ? im.codigo + ' – ' : '') + im.titulo;
+        link.onclick = function() {
+          abrirDetalhe(id);
+          toggleChatIA();
+        };
+        div.appendChild(link);
+      });
+
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function enviarChatIA() {
+      if (chatProcessando) return;
+      const input = document.getElementById('chat-input');
+      const texto = (input?.value || '').trim();
+      if (!texto) return;
+
+      const apiKey = getGroqKey();
+      if (!apiKey) {
+        adicionarMsgChat('ia', 'Ainda não configurei minha chave de IA neste navegador.\n\nNo painel do corretor: Configurar IA → cole a chave da Groq → Salvar.\nDepois volte aqui e continue a conversa.');
+        return;
+      }
+
+      input.value = '';
+      adicionarMsgChat('user', texto);
+      chatHistorico.push({ role: 'user', content: texto });
+      chatProcessando = true;
+
+      const typing = document.createElement('div');
+      typing.id = 'chat-typing';
+      typing.className = 'mr-8 text-xs text-gray-400 px-2';
+      typing.textContent = 'Radar está digitando...';
+      document.getElementById('chat-mensagens')?.appendChild(typing);
+
+      const system = `Você é o Radar, assistente consultivo da RadarImob (imobiliária). Tom humano, amigável e profissional em português do Brasil. Não seja robótico.
+
+Missão: ajudar a pessoa a encontrar o imóvel ideal com poucas perguntas e sugestões concretas.
+
+Catálogo atual (use só estes imóveis; não invente):
+${resumoImoveisParaIA()}
+
+Regras:
+- Faça no máximo 1 ou 2 perguntas por mensagem.
+- Quando sugerir imóveis, cite o ID no formato ID:xxxxxxxx para o sistema gerar botão (use o ID real da lista).
+- Se a pessoa estiver em dúvida, pergunte: bairro/cidade, quantos quartos, venda ou aluguel, faixa de preço.
+- Seja sincero se não houver imóvel que bata com o pedido.
+- Respostas curtas (2 a 5 frases), sem listas enormes.
+- Não invente preços, bairros ou características.`;
+
+      try {
+        let modelo = getGroqModel();
+        try {
+          modelo = await listarModelosGroq(apiKey);
+          localStorage.setItem('radar_groq_model', modelo);
+        } catch (e) {}
+
+        const messages = [
+          { role: 'system', content: system },
+          ...chatHistorico.slice(-12)
+        ];
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + apiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: modelo,
+            messages,
+            temperature: 0.7,
+            max_tokens: 600
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Erro na API');
+
+        const reply = data.choices?.[0]?.message?.content?.trim() || 'Não consegui responder agora. Tente de novo.';
+        chatHistorico.push({ role: 'assistant', content: reply });
+        document.getElementById('chat-typing')?.remove();
+        adicionarMsgChat('ia', reply);
+      } catch (err) {
+        document.getElementById('chat-typing')?.remove();
+        adicionarMsgChat('ia', 'Tive um problema ao responder: ' + (err.message || 'tente novamente em instantes.'));
+      } finally {
+        chatProcessando = false;
+      }
+    }
+
     carregarImoveis();
   </script>
+
+  <!-- CHAT IA FLOUTANTE -->
+  <button id="chat-btn" type="button" onclick="toggleChatIA()"
+          class="fixed bottom-5 right-5 z-[90] bg-radar-600 hover:bg-radar-700 text-white rounded-full shadow-lg px-4 py-3 text-sm font-semibold flex items-center gap-2">
+    <span>📡</span> Radar IA
+  </button>
+
+  <div id="chat-painel" class="hidden fixed bottom-5 right-5 z-[91] w-[min(100vw-1.5rem,380px)] h-[min(70vh,520px)] bg-gray-50 border border-gray-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div class="bg-radar-800 text-white px-4 py-3 flex items-center justify-between">
+      <div>
+        <div class="font-semibold text-sm">Radar IA</div>
+        <div class="text-xs text-white/70">Consultor de imóveis</div>
+      </div>
+      <button type="button" onclick="toggleChatIA()" class="text-white/80 hover:text-white text-xl leading-none">&times;</button>
+    </div>
+    <div id="chat-mensagens" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
+    <div class="p-3 border-t border-gray-200 bg-white flex gap-2">
+      <input id="chat-input" type="text" placeholder="Ex: 3 quartos em Pinheiros..."
+             class="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-radar-500 focus:outline-none"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();enviarChatIA();}">
+      <button type="button" onclick="enviarChatIA()" class="bg-radar-600 hover:bg-radar-700 text-white px-4 py-2 rounded-xl text-sm font-semibold">
+        Enviar
+      </button>
+    </div>
+  </div>
+
 </body>
 </html>
