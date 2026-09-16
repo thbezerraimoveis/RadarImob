@@ -268,7 +268,7 @@
 
       <div id="admin-dashboard" class="admin-page active">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
           <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-radar-600">
             <div class="text-sm text-gray-500">Total de Imóveis</div>
             <div class="text-3xl font-bold text-radar-700 mt-1" id="stat-total">0</div>
@@ -285,10 +285,24 @@
             <div class="text-sm text-gray-500">Leads</div>
             <div class="text-3xl font-bold text-purple-600 mt-1" id="stat-leads">0</div>
           </div>
+          <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-blue-500">
+            <div class="text-sm text-gray-500">Visualizações</div>
+            <div class="text-3xl font-bold text-blue-600 mt-1" id="stat-views">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-5 border-t-4 border-emerald-500">
+            <div class="text-sm text-gray-500">Cliques WhatsApp</div>
+            <div class="text-3xl font-bold text-emerald-600 mt-1" id="stat-whatsapp">0</div>
+          </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-6">
-          <h2 class="font-semibold text-lg mb-4">Últimos imóveis cadastrados</h2>
-          <div id="ultimos-imoveis" class="space-y-3 text-sm"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="font-semibold text-lg mb-4">Últimos imóveis cadastrados</h2>
+            <div id="ultimos-imoveis" class="space-y-3 text-sm"></div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="font-semibold text-lg mb-4">Imóveis mais vistos</h2>
+            <div id="mais-vistos" class="space-y-3 text-sm"></div>
+          </div>
         </div>
       </div>
 
@@ -311,6 +325,8 @@
                   <th class="text-left px-4 py-3">Finalidade</th>
                   <th class="text-left px-4 py-3">Bairro</th>
                   <th class="text-left px-4 py-3">Preço</th>
+                  <th class="text-center px-4 py-3">Views</th>
+                  <th class="text-center px-4 py-3">WhatsApp</th>
                   <th class="text-right px-4 py-3">Ações</th>
                 </tr>
               </thead>
@@ -674,9 +690,36 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    async function registrarView(id) {
+      const imovel = imoveis.find(i => i.id === id);
+      if (!imovel) return;
+      const novo = (imovel.views || 0) + 1;
+      imovel.views = novo;
+      try {
+        await supabaseClient.from('imoveis').update({ views: novo }).eq('id', id);
+      } catch (e) {
+        console.warn('Erro ao registrar view', e);
+      }
+    }
+
+    async function registrarWhatsAppClick(id) {
+      if (!id) return;
+      const imovel = imoveis.find(i => i.id === id);
+      if (!imovel) return;
+      const novo = (imovel.whatsapp_clicks || 0) + 1;
+      imovel.whatsapp_clicks = novo;
+      try {
+        await supabaseClient.from('imoveis').update({ whatsapp_clicks: novo }).eq('id', id);
+      } catch (e) {
+        console.warn('Erro ao registrar clique WhatsApp', e);
+      }
+    }
+
     function abrirDetalhe(id) {
       const imovel = imoveis.find(i => i.id === id);
       if (!imovel) return;
+
+      registrarView(id);
 
       const endereco = [imovel.bairro, imovel.cidade, 'Brasil'].filter(Boolean).join(', ');
       const mapaUrl = `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&z=15&output=embed`;
@@ -721,6 +764,7 @@
 
             <a href="https://wa.me/5511999999999?text=${encodeURIComponent('Olá! Tenho interesse no imóvel ' + (imovel.codigo || '') + ' - ' + imovel.titulo)}"
                target="_blank"
+               onclick="registrarWhatsAppClick('${imovel.id}')"
                class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl">
               Falar no WhatsApp sobre este imóvel
             </a>
@@ -953,12 +997,37 @@
       document.getElementById('stat-venda').textContent = imoveis.filter(i => i.finalidade === 'venda').length;
       document.getElementById('stat-aluguel').textContent = imoveis.filter(i => i.finalidade === 'aluguel').length;
 
+      const totalViews = imoveis.reduce((s, i) => s + (Number(i.views) || 0), 0);
+      const totalWa = imoveis.reduce((s, i) => s + (Number(i.whatsapp_clicks) || 0), 0);
+      const elViews = document.getElementById('stat-views');
+      const elWa = document.getElementById('stat-whatsapp');
+      if (elViews) elViews.textContent = totalViews;
+      if (elWa) elWa.textContent = totalWa;
+
       const ultimos = document.getElementById('ultimos-imoveis');
       if (ultimos) {
         const lista = [...imoveis].slice(0, 5);
         ultimos.innerHTML = lista.length
           ? lista.map(i => `<div class="flex justify-between border-b border-gray-100 py-2"><span>${i.codigo ? i.codigo + ' – ' : ''}${i.titulo}</span><span class="text-radar-600 font-medium">${formatarPreco(i.preco, i.finalidade)}</span></div>`).join('')
           : '<p class="text-gray-400">Nenhum imóvel ainda.</p>';
+      }
+
+      const maisVistos = document.getElementById('mais-vistos');
+      if (maisVistos) {
+        const ranking = [...imoveis]
+          .sort((a, b) => (Number(b.views) || 0) - (Number(a.views) || 0))
+          .slice(0, 5);
+        maisVistos.innerHTML = ranking.length
+          ? ranking.map(i => {
+              const v = Number(i.views) || 0;
+              const w = Number(i.whatsapp_clicks) || 0;
+              const conv = v > 0 ? Math.round((w / v) * 100) : 0;
+              return `<div class="flex justify-between items-center border-b border-gray-100 py-2 gap-2">
+                <span class="truncate">${i.codigo ? i.codigo + ' – ' : ''}${i.titulo}</span>
+                <span class="text-xs text-gray-500 whitespace-nowrap">${v} views · ${w} WhatsApp · ${conv}%</span>
+              </div>`;
+            }).join('')
+          : '<p class="text-gray-400">Ainda sem visualizações.</p>';
       }
 
       const tbody = document.getElementById('tabela-admin-imoveis');
@@ -982,6 +1051,8 @@
           <td class="px-4 py-3 capitalize">${i.finalidade || ''}</td>
           <td class="px-4 py-3">${i.bairro || ''}</td>
           <td class="px-4 py-3 font-medium text-radar-700">${formatarPreco(i.preco, i.finalidade)}</td>
+          <td class="px-4 py-3 text-center text-blue-600 font-medium">${Number(i.views) || 0}</td>
+          <td class="px-4 py-3 text-center text-emerald-600 font-medium">${Number(i.whatsapp_clicks) || 0}</td>
           <td class="px-4 py-3 text-right space-x-2">
             <button onclick="editarImovel('${i.id}')" class="text-radar-600 hover:underline text-sm">Editar</button>
             <button onclick="excluirImovel('${i.id}')" class="text-red-500 hover:underline text-sm">Excluir</button>
