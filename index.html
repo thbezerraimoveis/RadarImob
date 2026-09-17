@@ -749,20 +749,28 @@
 
     async function carregarImoveis() {
       try {
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
           .from('imoveis')
           .select('*')
           .order('created_at', { ascending: false });
 
+        if (error) {
+          // tenta sem ordenar
+          const r2 = await supabaseClient.from('imoveis').select('*');
+          data = r2.data;
+          error = r2.error;
+        }
         if (error) throw error;
+
         imoveis = data || [];
         renderDestaques();
         renderLista();
         if (usuarioLogado) atualizarAdmin();
       } catch (err) {
         console.error('Erro ao carregar imóveis:', err);
-        document.getElementById('destaques').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">Erro ao carregar imóveis.</p>';
-        document.getElementById('lista-imoveis').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">Erro ao carregar imóveis.</p>';
+        const msg = err.message || 'Erro ao carregar imóveis';
+        document.getElementById('destaques').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">' + msg + '</p>';
+        document.getElementById('lista-imoveis').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">' + msg + '</p>';
       }
     }
 
@@ -1985,23 +1993,47 @@ ${texto}`;
           descricao: document.getElementById('imovel-descricao').value.trim() || null
         };
 
-        if (idEdit) {
-          const { error } = await supabaseClient.from('imoveis').update(dados).eq('id', idEdit);
-          if (error) throw error;
-        } else {
-          if (!dados.codigo) {
-            dados.codigo = 'RI-' + String(Date.now()).slice(-6);
+        // versão mínima (funciona mesmo se colunas novas ainda não existirem no Supabase)
+        const dadosBasicos = {
+          codigo: dados.codigo,
+          status: dados.status,
+          destaque: dados.destaque,
+          titulo: dados.titulo,
+          tipo: dados.tipo,
+          finalidade: dados.finalidade,
+          preco: dados.preco,
+          area: dados.area,
+          quartos: dados.quartos,
+          banheiros: dados.banheiros,
+          vagas: dados.vagas,
+          bairro: dados.bairro,
+          cidade: dados.cidade,
+          foto: dados.foto,
+          descricao: dados.descricao
+        };
+
+        async function gravar(payload) {
+          if (idEdit) {
+            return await supabaseClient.from('imoveis').update(payload).eq('id', idEdit).select();
           }
-          const { error } = await supabaseClient.from('imoveis').insert([dados]);
-          if (error) throw error;
+          if (!payload.codigo) payload.codigo = 'RI-' + String(Date.now()).slice(-6);
+          return await supabaseClient.from('imoveis').insert([payload]).select();
         }
+
+        let res = await gravar(dados);
+        if (res.error) {
+          console.warn('Salvar completo falhou, tentando básico:', res.error.message);
+          res = await gravar(dadosBasicos);
+        }
+        if (res.error) throw res.error;
 
         await carregarImoveis();
         alert(idEdit ? 'Imóvel atualizado com sucesso!' : 'Imóvel cadastrado com sucesso!');
         mostrarAdmin('imoveis');
       } catch (err) {
         console.error(err);
-        alert('Erro ao salvar: ' + (err.message || 'Tente novamente'));
+        const msg = err.message || err.details || err.hint || JSON.stringify(err);
+        alert('Erro ao salvar: ' + msg + '\n\nSe falar de coluna ou permission, rode o SQL de permissões no Supabase.');
       } finally {
         btn.disabled = false;
         btn.textContent = 'Salvar Imóvel';
