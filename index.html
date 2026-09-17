@@ -768,13 +768,23 @@
 
     async function carregarLeads() {
       try {
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
           .from('leads')
           .select('*')
           .order('created_at', { ascending: false });
+
+        // se created_at não existir, tenta sem order
+        if (error) {
+          console.warn('Leads order:', error.message);
+          const r2 = await supabaseClient.from('leads').select('*');
+          data = r2.data;
+          error = r2.error;
+        }
         if (error) throw error;
+
         leads = data || [];
-        document.getElementById('stat-leads').textContent = leads.length;
+        const elStat = document.getElementById('stat-leads');
+        if (elStat) elStat.textContent = leads.length;
 
         const tbody = document.getElementById('tabela-leads');
         const sem = document.getElementById('sem-leads');
@@ -790,13 +800,14 @@
         tbody.innerHTML = leads.map(l => `
           <tr class="hover:bg-gray-50">
             <td class="px-4 py-3">${l.nome || '—'}</td>
-            <td class="px-4 py-3 font-medium">${l.whatsapp}</td>
+            <td class="px-4 py-3 font-medium">${l.whatsapp || l.telefone || '—'}</td>
             <td class="px-4 py-3 text-xs text-gray-500">${l.origem || '—'}</td>
             <td class="px-4 py-3 text-xs text-gray-500">${l.created_at ? new Date(l.created_at).toLocaleString('pt-BR') : '—'}</td>
           </tr>
         `).join('');
       } catch (err) {
         console.error('Erro ao carregar leads:', err);
+        alert('Erro ao carregar leads: ' + (err.message || JSON.stringify(err)));
       }
     }
 
@@ -1215,25 +1226,29 @@
       btn.disabled = true;
       btn.textContent = 'Abrindo...';
 
-      try {
-        await supabaseClient.from('leads').insert([{
+      let leadOk = false;
+      // 1ª tentativa com dados do imóvel
+      let res = await supabaseClient.from('leads').insert([{
+        nome,
+        whatsapp: fone,
+        origem: 'whatsapp_imovel'
+      }]).select();
+
+      if (res.error) {
+        console.warn('Insert lead falhou:', res.error);
+        // 2ª tentativa só nome + whatsapp
+        res = await supabaseClient.from('leads').insert([{
           nome,
-          whatsapp: fone,
-          origem: 'whatsapp_imovel',
-          imovel_id: imovelId,
-          imovel_titulo: imovel.titulo || null
-        }]);
-      } catch (err) {
-        console.warn('Lead (colunas extras podem faltar):', err);
-        try {
-          await supabaseClient.from('leads').insert([{
-            nome,
-            whatsapp: fone,
-            origem: 'whatsapp_imovel'
-          }]);
-        } catch (e2) {
-          console.warn(e2);
-        }
+          whatsapp: fone
+        }]).select();
+      }
+
+      if (res.error) {
+        console.error('Lead não gravado:', res.error);
+        alert('Não consegui salvar seu contato no sistema (' + (res.error.message || 'erro') + '). Vou abrir o WhatsApp mesmo assim.');
+      } else {
+        leadOk = true;
+        if (res.data) leads = (res.data || []).concat(leads);
       }
 
       registrarWhatsAppClick(imovelId);
