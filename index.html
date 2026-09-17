@@ -51,7 +51,7 @@
         </nav>
 
         <div class="flex items-center gap-3">
-          <a href="https://wa.me/5511999999999" target="_blank"
+          <a id="link-wa-header" href="#" target="_blank" rel="noopener"
              class="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg">
             WhatsApp
           </a>
@@ -164,7 +164,7 @@
         <h1 class="text-3xl font-bold text-center text-radar-800 mb-8">Fale conosco</h1>
         <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
           <p class="text-gray-600 mb-6">Prefere conversar direto?</p>
-          <a href="https://wa.me/5511999999999" target="_blank"
+          <a id="link-wa-contato" href="#" target="_blank" rel="noopener"
              class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-8 py-3 rounded-xl">
             Chamar no WhatsApp
           </a>
@@ -252,7 +252,7 @@
         </button>
         <button onclick="mostrarAdmin('config')" data-admin="config"
                 class="admin-link w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm hover:bg-white/10 transition">
-          <span>⚙️</span> Configurar IA
+          <span>⚙️</span> Configurações
         </button>
       </nav>
 
@@ -620,10 +620,26 @@
       </div>
 
       <div id="admin-config" class="admin-page">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Configurar IA</h1>
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Configurações</h1>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 max-w-lg space-y-4 mb-6">
+          <h2 class="font-semibold text-gray-800">WhatsApp de contato</h2>
+          <p class="text-sm text-gray-600">Número que aparece no site e recebe os leads (com DDI 55).</p>
+          <div>
+            <label class="block text-sm font-medium mb-1">Número (só dígitos)</label>
+            <input type="text" id="config-whatsapp" placeholder="5513997914515"
+                   class="w-full px-3 py-2 border rounded-lg text-sm">
+          </div>
+          <button type="button" onclick="salvarWhatsAppConfig()" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">
+            Salvar WhatsApp
+          </button>
+          <p id="config-wa-status" class="text-sm text-gray-500"></p>
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm p-6 max-w-lg space-y-4">
+          <h2 class="font-semibold text-gray-800">Inteligência Artificial (Groq)</h2>
           <p class="text-sm text-gray-600">
-            Cole sua chave da <strong>Groq</strong> aqui. Ela fica salva <strong>somente neste navegador</strong> (não vai para o GitHub nem para o site público).
+            Cole sua chave da <strong>Groq</strong> aqui. Fica salva <strong>somente neste navegador</strong>.
           </p>
           <div>
             <label class="block text-sm font-medium mb-1">API Key da Groq</label>
@@ -675,6 +691,34 @@
         </button>
       </form>
       <p class="text-xs text-gray-400 text-center mt-4">Seus dados estão seguros. Não enviamos spam.</p>
+    </div>
+  </div>
+
+  <!-- POPUP LEAD WHATSAPP (imóvel) -->
+  <div id="popup-lead-wa" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50" onclick="fecharLeadWhatsApp()"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 z-10">
+      <button type="button" onclick="fecharLeadWhatsApp()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 text-green-600 text-2xl mb-3">💬</div>
+        <h2 class="text-xl font-bold text-gray-800">Quase lá!</h2>
+        <p class="text-gray-500 text-sm mt-2" id="lead-wa-subtitulo">Deixe seu contato e continue no WhatsApp sobre este imóvel.</p>
+      </div>
+      <form id="form-lead-wa" class="space-y-4" onsubmit="enviarLeadWhatsApp(event)">
+        <input type="hidden" id="lead-wa-imovel-id">
+        <div>
+          <input type="text" id="lead-wa-nome" required placeholder="Seu nome"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+        </div>
+        <div>
+          <input type="tel" id="lead-wa-fone" required placeholder="Seu WhatsApp (ex: 13997914515)"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+        </div>
+        <button type="submit" id="btn-lead-wa" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg">
+          Continuar no WhatsApp
+        </button>
+      </form>
+      <p class="text-xs text-gray-400 text-center mt-4">Usamos seus dados só para retorno sobre o imóvel.</p>
     </div>
   </div>
 
@@ -983,12 +1027,11 @@
               ${imovel.tour_url ? `<a href="${imovel.tour_url}" target="_blank" class="text-sm text-radar-600 underline">Tour virtual</a>` : ''}
             </div>
 
-            <a href="https://wa.me/5511999999999?text=${encodeURIComponent('Olá! Tenho interesse no imóvel ' + (imovel.codigo || '') + ' - ' + imovel.titulo)}"
-               target="_blank"
-               onclick="registrarWhatsAppClick('${imovel.id}')"
+            <button type="button"
+               onclick="abrirLeadWhatsApp('${imovel.id}')"
                class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl">
               Falar no WhatsApp sobre este imóvel
-            </a>
+            </button>
           </div>
         </div>
 
@@ -1105,6 +1148,105 @@
       return localStorage.getItem('radar_groq_key') || '';
     }
 
+    // WhatsApp padrão do corretor (13) 99791-4515
+    const WHATSAPP_PADRAO = '5513997914515';
+
+    function getWhatsAppNumber() {
+      const salvo = (localStorage.getItem('radar_whatsapp') || '').replace(/\D/g, '');
+      if (salvo) return salvo;
+      return WHATSAPP_PADRAO;
+    }
+
+    function linkWhatsApp(texto) {
+      const n = getWhatsAppNumber();
+      let url = 'https://wa.me/' + n;
+      if (texto) url += '?text=' + encodeURIComponent(texto);
+      return url;
+    }
+
+    function atualizarLinksWhatsApp() {
+      const header = document.getElementById('link-wa-header');
+      const contato = document.getElementById('link-wa-contato');
+      if (header) header.href = linkWhatsApp('Olá! Vim pelo site RadarImob e gostaria de mais informações.');
+      if (contato) contato.href = linkWhatsApp('Olá! Vim pela página de contato do RadarImob.');
+    }
+
+    function salvarWhatsAppConfig() {
+      let n = (document.getElementById('config-whatsapp').value || '').replace(/\D/g, '');
+      if (!n) {
+        alert('Informe o número com DDD.');
+        return;
+      }
+      if (n.length <= 11 && n.indexOf('55') !== 0) n = '55' + n;
+      localStorage.setItem('radar_whatsapp', n);
+      atualizarLinksWhatsApp();
+      const st = document.getElementById('config-wa-status');
+      if (st) {
+        st.textContent = '✓ WhatsApp salvo: ' + n;
+        st.className = 'text-sm text-green-600';
+      }
+      alert('WhatsApp atualizado: ' + n);
+    }
+
+    function abrirLeadWhatsApp(imovelId) {
+      const imovel = imoveis.find(i => i.id === imovelId);
+      if (!imovel) return;
+      document.getElementById('lead-wa-imovel-id').value = imovelId;
+      document.getElementById('lead-wa-subtitulo').textContent =
+        'Deixe seu contato e continue no WhatsApp sobre: ' + (imovel.codigo ? imovel.codigo + ' – ' : '') + imovel.titulo;
+      document.getElementById('lead-wa-nome').value = '';
+      document.getElementById('lead-wa-fone').value = '';
+      document.getElementById('popup-lead-wa').classList.remove('hidden');
+    }
+
+    function fecharLeadWhatsApp() {
+      document.getElementById('popup-lead-wa').classList.add('hidden');
+    }
+
+    async function enviarLeadWhatsApp(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-lead-wa');
+      const imovelId = document.getElementById('lead-wa-imovel-id').value;
+      const nome = document.getElementById('lead-wa-nome').value.trim();
+      const fone = document.getElementById('lead-wa-fone').value.trim();
+      const imovel = imoveis.find(i => i.id === imovelId);
+      if (!imovel || !nome || !fone) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Abrindo...';
+
+      try {
+        await supabaseClient.from('leads').insert([{
+          nome,
+          whatsapp: fone,
+          origem: 'whatsapp_imovel',
+          imovel_id: imovelId,
+          imovel_titulo: imovel.titulo || null
+        }]);
+      } catch (err) {
+        console.warn('Lead (colunas extras podem faltar):', err);
+        try {
+          await supabaseClient.from('leads').insert([{
+            nome,
+            whatsapp: fone,
+            origem: 'whatsapp_imovel'
+          }]);
+        } catch (e2) {
+          console.warn(e2);
+        }
+      }
+
+      registrarWhatsAppClick(imovelId);
+
+      const msg = 'Olá! Meu nome é ' + nome + '. Tenho interesse no imóvel ' +
+        (imovel.codigo || '') + ' - ' + imovel.titulo + '. Meu WhatsApp: ' + fone;
+
+      fecharLeadWhatsApp();
+      window.open(linkWhatsApp(msg), '_blank');
+      btn.disabled = false;
+      btn.textContent = 'Continuar no WhatsApp';
+    }
+
     function carregarTelaConfigIA() {
       const inp = document.getElementById('config-groq-key');
       const status = document.getElementById('config-ia-status');
@@ -1117,6 +1259,13 @@
           status.textContent = '○ Nenhuma chave configurada — a IA não funciona sem ela';
           status.className = 'text-sm text-gray-500';
         }
+      }
+      const wa = document.getElementById('config-whatsapp');
+      if (wa) wa.value = getWhatsAppNumber();
+      const stWa = document.getElementById('config-wa-status');
+      if (stWa) {
+        stWa.textContent = 'Atual: ' + getWhatsAppNumber();
+        stWa.className = 'text-sm text-gray-500';
       }
     }
 
@@ -2090,6 +2239,7 @@ Regras:
       }
     }
 
+    atualizarLinksWhatsApp();
     carregarImoveis();
   </script>
 
