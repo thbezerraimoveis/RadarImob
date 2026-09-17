@@ -1641,12 +1641,33 @@ Regras:
           localStorage.setItem('radar_groq_model', modelo);
         } catch (e) {}
 
-        const prompt = `Extraia dados de anúncio imobiliário. Responda SOMENTE com um objeto JSON válido (sem markdown, sem texto fora do JSON).
-Use apenas estas chaves quando souber o valor:
-{"titulo":"","tipo":"apartamento|casa|terreno|comercial","finalidade":"venda|aluguel","preco":0,"condominio":0,"iptu":0,"area":0,"area_util":0,"quartos":0,"suites":0,"banheiros":0,"salas":0,"vagas":0,"mobiliado":"nao|sim|parcial","ano_construcao":0,"bairro":"","cidade":"","condominio_nome":"","rua":"","numero":"","aceita_financiamento":true,"descricao":"resumo curto","caracteristicas":[]}
-caracteristicas só pode ter: ar_condicionado,armarios,varanda,sacada,lavabo,closet,cozinha_americana,gas_encaixado,aquecimento,piscina,churrasqueira,academia,portaria_24h,elevador,playground,salao_festas,quadra,coworking
-Números sem ponto de milhar. descricao no máximo 400 caracteres, sem aspas quebradas.
-Texto do anúncio:
+        const prompt = `Leia o anuncio e preencha so o que existir. Responda APENAS neste formato, uma linha por campo:
+
+titulo: 
+tipo: apartamento ou casa ou terreno ou comercial
+finalidade: venda ou aluguel
+preco: so numero
+condominio: so numero
+iptu: so numero
+area: so numero
+area_util: so numero
+quartos: so numero
+suites: so numero
+banheiros: so numero
+salas: so numero
+vagas: so numero
+mobiliado: nao ou sim ou parcial
+ano_construcao: so numero
+bairro: 
+cidade: 
+condominio_nome: 
+rua: 
+numero: 
+aceita_financiamento: sim ou nao
+descricao: resumo em uma frase
+caracteristicas: codigos separados por virgula (ar_condicionado,armarios,varanda,sacada,lavabo,closet,cozinha_americana,gas_encaixado,aquecimento,piscina,churrasqueira,academia,portaria_24h,elevador,playground,salao_festas,quadra,coworking)
+
+Anuncio:
 ${texto}`;
 
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -1658,18 +1679,20 @@ ${texto}`;
           body: JSON.stringify({
             model: modelo,
             messages: [
-              { role: 'system', content: 'Você só responde JSON válido de uma linha ou várias, sem explicações.' },
+              { role: 'system', content: 'Extraia dados de imoveis. Responda so no formato campo: valor, sem markdown e sem explicacao.' },
               { role: 'user', content: prompt }
             ],
             temperature: 0.1,
-            max_tokens: 1000
+            max_tokens: 700
           })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error?.message || 'Erro na API');
         let raw = data.choices?.[0]?.message?.content?.trim() || '';
-        const parsed = extrairJSONSeguro(raw);
-        if (!parsed) throw new Error('A IA não retornou JSON legível. Tente um texto mais curto.');
+        const parsed = parsearRespostaIACadastro(raw);
+        if (!parsed || !Object.keys(parsed).length) {
+          throw new Error('Não consegui ler a resposta da IA. Tente de novo.');
+        }
         aplicarDadosIANoForm(parsed);
         alert('Campos preenchidos pela IA. Revise antes de salvar.');
       } catch (err) {
@@ -1679,6 +1702,68 @@ ${texto}`;
         btn.disabled = false;
         btn.textContent = '✨ Preencher com IA';
       }
+    }
+
+    function parsearRespostaIACadastro(texto) {
+      const out = {};
+      if (!texto) return out;
+      // tenta JSON primeiro
+      const asJson = extrairJSONSeguro(texto);
+      if (asJson && typeof asJson === 'object') return asJson;
+
+      const linhas = String(texto).split(/\r?\n/);
+      linhas.forEach(function(linha) {
+        const m = linha.match(/^\s*([a-zA-Z0-9_]+)\s*[:\-–]\s*(.+)?\s*$/);
+        if (!m) return;
+        const key = m[1].toLowerCase().trim();
+        let val = (m[2] || '').trim();
+        if (!val || val === '-' || val.toLowerCase() === 'null') return;
+
+        if (['preco','condominio','iptu','area','area_util','quartos','suites','banheiros','salas','vagas','ano_construcao'].indexOf(key) >= 0) {
+          const num = String(val).replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
+          const n = parseFloat(num);
+          if (!isNaN(n)) out[key] = n;
+          return;
+        }
+        if (key === 'tipo') {
+          const v = val.toLowerCase();
+          if (v.indexOf('apart') >= 0) out.tipo = 'apartamento';
+          else if (v.indexOf('casa') >= 0) out.tipo = 'casa';
+          else if (v.indexOf('terreno') >= 0) out.tipo = 'terreno';
+          else if (v.indexOf('comerc') >= 0) out.tipo = 'comercial';
+          return;
+        }
+        if (key === 'finalidade') {
+          const v = val.toLowerCase();
+          out.finalidade = (v.indexOf('alug') >= 0 || v.indexOf('loc') >= 0) ? 'aluguel' : 'venda';
+          return;
+        }
+        if (key === 'mobiliado') {
+          const v = val.toLowerCase();
+          if (v.indexOf('parcial') >= 0) out.mobiliado = 'parcial';
+          else if (v.indexOf('sim') >= 0 || v === 'yes') out.mobiliado = 'sim';
+          else out.mobiliado = 'nao';
+          return;
+        }
+        if (key === 'aceita_financiamento') {
+          const v = val.toLowerCase();
+          out.aceita_financiamento = (v === 'sim' || v === 'true' || v === 'yes' || v === '1');
+          return;
+        }
+        if (key === 'caracteristicas') {
+          const codes = val.split(/[,;|]/).map(function(s){ return s.trim().toLowerCase().replace(/\s+/g, '_'); }).filter(Boolean);
+          out.caracteristicas = codes;
+          return;
+        }
+        if (key === 'titulo') out.titulo = val;
+        else if (key === 'bairro') out.bairro = val;
+        else if (key === 'cidade') out.cidade = val;
+        else if (key === 'condominio_nome') out.condominio_nome = val;
+        else if (key === 'rua') out.rua = val;
+        else if (key === 'numero') out.numero = val;
+        else if (key === 'descricao') out.descricao = val;
+      });
+      return out;
     }
 
     async function salvarImovel(e) {
