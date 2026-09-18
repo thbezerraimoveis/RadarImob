@@ -835,15 +835,22 @@
       const fotos = getFotosImovel(imovel);
       const capa = capaImovel(imovel);
       const qtd = fotos.length;
+      const idSafe = String(imovel.id).replace(/'/g, '');
       return `
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer relative" onclick="abrirDetalhe('${imovel.id}')">
-          <div class="aspect-[4/3] overflow-hidden bg-gray-100 relative">
-            <img src="${capa}" alt="${imovel.titulo}" class="w-full h-full object-cover hover:scale-105 transition duration-300" onerror="this.src='https://via.placeholder.com/800x600?text=Sem+Foto'">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition relative">
+          <div class="aspect-[4/3] overflow-hidden bg-gray-100 relative cursor-pointer" onclick="abrirDetalhe('${idSafe}')">
+            <img id="card-img-${idSafe}" src="${capa}" alt="${imovel.titulo}" class="w-full h-full object-cover transition duration-300" onerror="this.src='https://via.placeholder.com/800x600?text=Sem+Foto'">
             ${tarjaStatus(imovel.status)}
-            ${imovel.destaque ? '<span class="absolute top-3 right-3 bg-radar-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow">Destaque</span>' : ''}
-            ${qtd > 1 ? `<span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded-md">${qtd} fotos</span>` : ''}
+            ${imovel.destaque ? '<span class="absolute top-3 right-3 bg-radar-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow z-10">Destaque</span>' : ''}
+            ${qtd > 1 ? `
+              <button type="button" onclick="event.stopPropagation(); cardFotoAnterior('${idSafe}')"
+                class="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg leading-none">‹</button>
+              <button type="button" onclick="event.stopPropagation(); cardFotoProxima('${idSafe}')"
+                class="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg leading-none">›</button>
+              <span id="card-cnt-${idSafe}" class="absolute bottom-3 right-3 z-10 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded-md">1 / ${qtd}</span>
+            ` : ''}
           </div>
-          <div class="p-5">
+          <div class="p-5 cursor-pointer" onclick="abrirDetalhe('${idSafe}')">
             <div class="flex items-center justify-between mb-1">
               <div class="text-xs font-medium text-radar-600 uppercase">${imovel.finalidade === 'venda' ? 'Venda' : 'Aluguel'}</div>
               ${imovel.codigo ? `<div class="text-xs text-gray-400 font-mono">${imovel.codigo}</div>` : ''}
@@ -861,6 +868,37 @@
           </div>
         </div>
       `;
+    }
+
+    // índice da foto atual em cada card
+    window._cardFotoIdx = window._cardFotoIdx || {};
+
+    function cardFotoProxima(id) {
+      const imovel = imoveis.find(i => String(i.id) === String(id));
+      if (!imovel) return;
+      const fotos = getFotosImovel(imovel);
+      if (fotos.length < 2) return;
+      const cur = window._cardFotoIdx[id] || 0;
+      const next = (cur + 1) % fotos.length;
+      window._cardFotoIdx[id] = next;
+      const img = document.getElementById('card-img-' + id);
+      const cnt = document.getElementById('card-cnt-' + id);
+      if (img) img.src = fotos[next];
+      if (cnt) cnt.textContent = (next + 1) + ' / ' + fotos.length;
+    }
+
+    function cardFotoAnterior(id) {
+      const imovel = imoveis.find(i => String(i.id) === String(id));
+      if (!imovel) return;
+      const fotos = getFotosImovel(imovel);
+      if (fotos.length < 2) return;
+      const cur = window._cardFotoIdx[id] || 0;
+      const prev = (cur - 1 + fotos.length) % fotos.length;
+      window._cardFotoIdx[id] = prev;
+      const img = document.getElementById('card-img-' + id);
+      const cnt = document.getElementById('card-cnt-' + id);
+      if (img) img.src = fotos[prev];
+      if (cnt) cnt.textContent = (prev + 1) + ' / ' + fotos.length;
     }
 
     function renderDestaques() {
@@ -1993,7 +2031,7 @@ ${texto}`;
           descricao: document.getElementById('imovel-descricao').value.trim() || null
         };
 
-        // versão mínima (funciona mesmo se colunas novas ainda não existirem no Supabase)
+        // básico SEM fotos extras
         const dadosBasicos = {
           codigo: dados.codigo,
           status: dados.status,
@@ -2012,6 +2050,12 @@ ${texto}`;
           descricao: dados.descricao
         };
 
+        // básico + várias fotos (o que precisamos para o carrossel)
+        const dadosComFotos = Object.assign({}, dadosBasicos, {
+          foto: fotoUrl,
+          fotos: urls
+        });
+
         async function gravar(payload) {
           if (idEdit) {
             return await supabaseClient.from('imoveis').update(payload).eq('id', idEdit).select();
@@ -2021,14 +2065,31 @@ ${texto}`;
         }
 
         let res = await gravar(dados);
+        let salvouFotos = !res.error && urls.length > 0;
+
         if (res.error) {
-          console.warn('Salvar completo falhou, tentando básico:', res.error.message);
+          console.warn('Salvar completo falhou:', res.error.message);
+          // tenta gravar com foto + array fotos
+          res = await gravar(dadosComFotos);
+          salvouFotos = !res.error && urls.length > 0;
+        }
+        if (res.error) {
+          console.warn('Salvar com fotos falhou:', res.error.message);
           res = await gravar(dadosBasicos);
+          salvouFotos = false;
         }
         if (res.error) throw res.error;
 
+        fotosNovasFiles = [];
+        fotosExistentes = urls.length ? urls : (fotoUrl ? [fotoUrl] : []);
+
         await carregarImoveis();
-        alert(idEdit ? 'Imóvel atualizado com sucesso!' : 'Imóvel cadastrado com sucesso!');
+
+        if (urls.length > 1 && !salvouFotos) {
+          alert('Imóvel salvo, mas só a foto de capa foi gravada.\n\nRode no Supabase o SQL da coluna "fotos" (está nas instruções) e edite o imóvel de novo para enviar as outras fotos.');
+        } else {
+          alert(idEdit ? 'Imóvel atualizado com sucesso!' : 'Imóvel cadastrado com sucesso!' + (urls.length > 1 ? '\n' + urls.length + ' fotos salvas.' : ''));
+        }
         mostrarAdmin('imoveis');
       } catch (err) {
         console.error(err);
