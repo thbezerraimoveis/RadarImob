@@ -602,19 +602,40 @@
       </div>
 
       <div id="admin-leads" class="admin-page">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Leads</h1>
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Leads / Funil</h1>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" id="funil-resumo">
+          <div class="bg-white rounded-xl shadow-sm p-4 border-t-4 border-blue-500">
+            <div class="text-xs text-gray-500">Novos</div>
+            <div class="text-2xl font-bold text-blue-600" id="funil-novo">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-4 border-t-4 border-amber-500">
+            <div class="text-xs text-gray-500">Em contato</div>
+            <div class="text-2xl font-bold text-amber-600" id="funil-contato">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-4 border-t-4 border-purple-500">
+            <div class="text-xs text-gray-500">Visita</div>
+            <div class="text-2xl font-bold text-purple-600" id="funil-visita">0</div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm p-4 border-t-4 border-green-500">
+            <div class="text-xs text-gray-500">Fechado</div>
+            <div class="text-2xl font-bold text-green-600" id="funil-fechado">0</div>
+          </div>
+        </div>
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-radar-800 text-white">
-              <tr>
-                <th class="text-left px-4 py-3">Nome</th>
-                <th class="text-left px-4 py-3">WhatsApp</th>
-                <th class="text-left px-4 py-3">Origem</th>
-                <th class="text-left px-4 py-3">Data</th>
-              </tr>
-            </thead>
-            <tbody id="tabela-leads" class="divide-y divide-gray-100"></tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-radar-800 text-white">
+                <tr>
+                  <th class="text-left px-4 py-3">Nome</th>
+                  <th class="text-left px-4 py-3">WhatsApp</th>
+                  <th class="text-left px-4 py-3">Origem</th>
+                  <th class="text-left px-4 py-3">Status</th>
+                  <th class="text-left px-4 py-3">Data</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-leads" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
           <div id="sem-leads" class="hidden p-8 text-center text-gray-500">Nenhum lead ainda.</div>
         </div>
       </div>
@@ -774,6 +795,18 @@
       }
     }
 
+    const LEAD_STATUS = {
+      novo: { label: 'Novo', cor: 'bg-blue-100 text-blue-800' },
+      contato: { label: 'Em contato', cor: 'bg-amber-100 text-amber-800' },
+      visita: { label: 'Visita', cor: 'bg-purple-100 text-purple-800' },
+      fechado: { label: 'Fechado', cor: 'bg-green-100 text-green-800' },
+      perdido: { label: 'Perdido', cor: 'bg-gray-100 text-gray-600' }
+    };
+
+    function statusLead(l) {
+      return l.status || 'novo';
+    }
+
     async function carregarLeads() {
       try {
         let { data, error } = await supabaseClient
@@ -781,7 +814,6 @@
           .select('*')
           .order('created_at', { ascending: false });
 
-        // se created_at não existir, tenta sem order
         if (error) {
           console.warn('Leads order:', error.message);
           const r2 = await supabaseClient.from('leads').select('*');
@@ -794,6 +826,21 @@
         const elStat = document.getElementById('stat-leads');
         if (elStat) elStat.textContent = leads.length;
 
+        const cont = { novo: 0, contato: 0, visita: 0, fechado: 0 };
+        leads.forEach(l => {
+          const s = statusLead(l);
+          if (cont[s] !== undefined) cont[s]++;
+          else cont.novo++;
+        });
+        const elN = document.getElementById('funil-novo');
+        const elC = document.getElementById('funil-contato');
+        const elV = document.getElementById('funil-visita');
+        const elF = document.getElementById('funil-fechado');
+        if (elN) elN.textContent = cont.novo;
+        if (elC) elC.textContent = cont.contato;
+        if (elV) elV.textContent = cont.visita;
+        if (elF) elF.textContent = cont.fechado;
+
         const tbody = document.getElementById('tabela-leads');
         const sem = document.getElementById('sem-leads');
         if (!tbody) return;
@@ -805,17 +852,45 @@
         }
         if (sem) sem.classList.add('hidden');
 
-        tbody.innerHTML = leads.map(l => `
+        tbody.innerHTML = leads.map(l => {
+          const st = statusLead(l);
+          const info = LEAD_STATUS[st] || LEAD_STATUS.novo;
+          const opts = Object.keys(LEAD_STATUS).map(k =>
+            `<option value="${k}" ${k === st ? 'selected' : ''}>${LEAD_STATUS[k].label}</option>`
+          ).join('');
+          return `
           <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3">${l.nome || '—'}</td>
-            <td class="px-4 py-3 font-medium">${l.whatsapp || l.telefone || '—'}</td>
+            <td class="px-4 py-3 font-medium">${l.nome || '—'}</td>
+            <td class="px-4 py-3">
+              <a href="${linkWhatsApp('Olá ' + (l.nome || '') + '!')}" target="_blank" class="text-green-600 hover:underline font-medium">${l.whatsapp || l.telefone || '—'}</a>
+            </td>
             <td class="px-4 py-3 text-xs text-gray-500">${l.origem || '—'}</td>
+            <td class="px-4 py-3">
+              <select onchange="atualizarStatusLead('${l.id}', this.value)"
+                class="text-xs border rounded-lg px-2 py-1.5 ${info.cor} font-medium cursor-pointer">
+                ${opts}
+              </select>
+            </td>
             <td class="px-4 py-3 text-xs text-gray-500">${l.created_at ? new Date(l.created_at).toLocaleString('pt-BR') : '—'}</td>
-          </tr>
-        `).join('');
+          </tr>`;
+        }).join('');
       } catch (err) {
         console.error('Erro ao carregar leads:', err);
         alert('Erro ao carregar leads: ' + (err.message || JSON.stringify(err)));
+      }
+    }
+
+    async function atualizarStatusLead(id, status) {
+      try {
+        const { error } = await supabaseClient.from('leads').update({ status }).eq('id', id);
+        if (error) throw error;
+        const lead = leads.find(l => String(l.id) === String(id));
+        if (lead) lead.status = status;
+        await carregarLeads();
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao atualizar status: ' + (err.message || 'Rode o SQL da coluna status nos leads.'));
+        carregarLeads();
       }
     }
 
@@ -1277,12 +1352,20 @@
       let res = await supabaseClient.from('leads').insert([{
         nome,
         whatsapp: fone,
-        origem: 'whatsapp_imovel'
+        origem: 'whatsapp_imovel',
+        status: 'novo'
       }]).select();
 
       if (res.error) {
         console.warn('Insert lead falhou:', res.error);
-        // 2ª tentativa só nome + whatsapp
+        // 2ª tentativa sem status (coluna pode não existir ainda)
+        res = await supabaseClient.from('leads').insert([{
+          nome,
+          whatsapp: fone,
+          origem: 'whatsapp_imovel'
+        }]).select();
+      }
+      if (res.error) {
         res = await supabaseClient.from('leads').insert([{
           nome,
           whatsapp: fone
@@ -2184,11 +2267,20 @@ ${texto}`;
       const whatsapp = document.getElementById('popup-whatsapp').value.trim();
 
       try {
-        const { error } = await supabaseClient.from('leads').insert([{
+        let { error } = await supabaseClient.from('leads').insert([{
           nome,
           whatsapp,
-          origem: 'popup_saida'
+          origem: 'popup_saida',
+          status: 'novo'
         }]);
+        if (error) {
+          const r2 = await supabaseClient.from('leads').insert([{
+            nome,
+            whatsapp,
+            origem: 'popup_saida'
+          }]);
+          error = r2.error;
+        }
         if (error) throw error;
 
         alert('Obrigado! Em breve entraremos em contato.');
